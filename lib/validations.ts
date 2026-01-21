@@ -54,6 +54,7 @@ export const exerciseSchema = z.object({
 export const progressLogSchema = z.object({
   log_date: z.string(),
   weight: z.number().positive().optional(),
+  shoulders: z.number().positive().optional(),
   body_fat_percentage: z.number().min(0).max(100).optional(),
   muscle_mass: z.number().positive().optional(),
   chest: z.number().positive().optional(),

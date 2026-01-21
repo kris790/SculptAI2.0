@@ -13,15 +13,47 @@ export interface WorkoutWithExercises extends Workout {
   exercises: Exercise[]
 }
 
+const DUMMY_WORKOUTS: WorkoutWithExercises[] = [
+  {
+    id: 'dummy-1',
+    user_id: 'guest',
+    workout_name: 'Upper Body Power',
+    workout_type: 'strength',
+    duration_minutes: 65,
+    calories_burned: 420,
+    notes: 'Feeling strong today. Increased weight on bench press.',
+    completed_at: new Date(Date.now() - 86400000).toISOString(),
+    created_at: new Date().toISOString(),
+    exercises: [
+      { id: 'ex-1', workout_id: 'dummy-1', exercise_name: 'Dumbbell Bench Press', sets: 4, reps: 10, weight: 70, duration_seconds: null, distance: null, notes: null, order_index: 0, created_at: '' },
+      { id: 'ex-2', workout_id: 'dummy-1', exercise_name: 'Seated Cable Row', sets: 4, reps: 12, weight: 145, duration_seconds: null, distance: null, notes: null, order_index: 1, created_at: '' },
+    ]
+  },
+  {
+    id: 'dummy-2',
+    user_id: 'guest',
+    workout_name: 'V-Taper Lat Focus',
+    workout_type: 'strength',
+    duration_minutes: 50,
+    calories_burned: 310,
+    notes: 'Mind-muscle connection was on point.',
+    completed_at: new Date(Date.now() - 172800000).toISOString(),
+    created_at: new Date().toISOString(),
+    exercises: [
+      { id: 'ex-3', workout_id: 'dummy-2', exercise_name: 'Wide Grip Lat Pull Down', sets: 4, reps: 12, weight: 120, duration_seconds: null, distance: null, notes: null, order_index: 0, created_at: '' },
+    ]
+  }
+];
+
 export function useWorkouts() {
   const { user } = useAuth()
-  const [workouts, setWorkouts] = useState<WorkoutWithExercises[]>([])
+  const [workouts, setWorkouts] = useState<WorkoutWithExercises[]>(DUMMY_WORKOUTS)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
   const fetchWorkouts = useCallback(async () => {
     if (!user) {
-      setWorkouts([]);
+      setWorkouts(DUMMY_WORKOUTS);
       setLoading(false);
       return;
     }
@@ -41,8 +73,13 @@ export function useWorkouts() {
 
       if (workoutsError) throw workoutsError
 
-      setWorkouts(workoutsData as unknown as WorkoutWithExercises[])
+      const finalData = (workoutsData as any).length > 0 
+        ? (workoutsData as unknown as WorkoutWithExercises[]) 
+        : DUMMY_WORKOUTS;
+        
+      setWorkouts(finalData)
     } catch (err) {
+      setWorkouts(DUMMY_WORKOUTS); // Fallback on error
       setError(err instanceof Error ? err : new Error('Failed to fetch workouts'))
     } finally {
       setLoading(false)
@@ -50,16 +87,27 @@ export function useWorkouts() {
   }, [user])
 
   useEffect(() => {
-    if (user) {
-        fetchWorkouts();
-    } else {
-        setLoading(false);
-        setWorkouts([]);
-    }
+    fetchWorkouts();
   }, [user, fetchWorkouts])
 
   const createWorkout = async (workoutData: Omit<WorkoutInsert, 'id' | 'user_id' | 'created_at'>, exercises: Omit<ExerciseInsert, 'id' | 'workout_id' | 'created_at'>[]) => {
-    if (!user) throw new Error('User not authenticated')
+    if (!user) {
+      // Logic for dummy local storage or state update could go here
+      const newWorkout: WorkoutWithExercises = {
+        id: Math.random().toString(),
+        user_id: 'guest',
+        workout_name: workoutData.workout_name,
+        workout_type: workoutData.workout_type,
+        completed_at: workoutData.completed_at || new Date().toISOString(),
+        duration_minutes: workoutData.duration_minutes || 0,
+        calories_burned: workoutData.calories_burned || 0,
+        notes: workoutData.notes || '',
+        created_at: new Date().toISOString(),
+        exercises: exercises.map((e, i) => ({ ...e, id: Math.random().toString(), workout_id: 'dummy', order_index: i, created_at: '' } as Exercise))
+      };
+      setWorkouts(prev => [newWorkout, ...prev]);
+      return newWorkout;
+    }
 
     const workoutToInsert: WorkoutInsert = {
       ...workoutData,
@@ -103,6 +151,7 @@ export function useWorkouts() {
   }
 
   const updateWorkout = async (workoutId: string, updates: WorkoutUpdate) => {
+    if (!user) return;
     const { error } = await supabase
       .from('workouts')
       .update(updates)
@@ -113,6 +162,10 @@ export function useWorkouts() {
   }
 
   const deleteWorkout = async (workoutId: string) => {
+    if (!user) {
+      setWorkouts(prev => prev.filter(w => w.id !== workoutId));
+      return;
+    }
     const { error } = await supabase
       .from('workouts')
       .delete()

@@ -79,7 +79,7 @@ export default function WorkoutHistory() {
                         <span className="font-medium">{exercise.exercise_name}</span>
                         <span className="text-gray-400">
                           {exercise.sets && exercise.reps && `${exercise.sets} × ${exercise.reps}`}
-                          {exercise.weight && ` @ ${exercise.weight}kg`}
+                          {exercise.weight && ` @ ${exercise.weight} lbs`}
                         </span>
                       </div>
                     ))}

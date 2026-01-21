@@ -20,29 +20,38 @@ export default function Dashboard() {
   }).length;
 
   const totalMinutes = workouts.reduce((sum, w) => sum + (w.duration_minutes || 0), 0);
-  const totalCalories = workouts.reduce((sum, w) => sum + (w.calories_burned || 0), 0);
+  
+  // Calculate V-Taper Ratio from latest log
+  const latestLog = logs.length > 0 ? logs[0] : null;
+  const currentRatio = latestLog && latestLog.shoulders && latestLog.waist 
+    ? (latestLog.shoulders / latestLog.waist).toFixed(2)
+    : 'N/A';
 
   return (
     <div className="max-w-6xl mx-auto">
-      <h2 className="text-3xl font-bold mb-8">Dashboard</h2>
+      <h2 className="text-3xl font-bold mb-8">Physique Dashboard</h2>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-lg p-6 shadow-lg">
-          <p className="text-indigo-100 text-sm mb-1">Total Workouts</p>
-          <p className="text-4xl font-bold">{totalWorkouts}</p>
+          <p className="text-indigo-100 text-sm mb-1">V-Taper Ratio</p>
+          <p className="text-4xl font-bold">{currentRatio}</p>
+          <p className="text-xs text-indigo-200 mt-2 font-medium">Target: 1.50 (Golden Ratio)</p>
         </div>
         <div className="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-lg p-6 shadow-lg">
-          <p className="text-green-100 text-sm mb-1">This Week</p>
-          <p className="text-4xl font-bold">{thisWeekWorkouts}</p>
+          <p className="text-green-100 text-sm mb-1">Workouts Logged</p>
+          <p className="text-4xl font-bold">{totalWorkouts}</p>
+          <p className="text-xs text-green-200 mt-2">{thisWeekWorkouts} completed this week</p>
         </div>
         <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-lg p-6 shadow-lg">
-          <p className="text-purple-100 text-sm mb-1">Total Minutes</p>
+          <p className="text-purple-100 text-sm mb-1">Training Volume</p>
           <p className="text-4xl font-bold">{totalMinutes}</p>
+          <p className="text-xs text-purple-200 mt-2">Total active minutes</p>
         </div>
         <div className="bg-gradient-to-br from-red-500 to-red-600 text-white rounded-lg p-6 shadow-lg">
-          <p className="text-red-100 text-sm mb-1">Calories Burned</p>
-          <p className="text-4xl font-bold">{totalCalories.toLocaleString()}</p>
+          <p className="text-red-100 text-sm mb-1">Latest Weight</p>
+          <p className="text-4xl font-bold">{latestLog?.weight || '--'} <span className="text-lg">lbs</span></p>
+          <p className="text-xs text-red-200 mt-2">{latestLog ? new Date(latestLog.log_date).toLocaleDateString() : 'No data yet'}</p>
         </div>
       </div>
       
@@ -55,7 +64,7 @@ export default function Dashboard() {
 
         {/* Sidebar: Recent Activity */}
         <div className="bg-gray-800 rounded-lg shadow-md p-6 border border-gray-700">
-          <h3 className="text-xl font-bold mb-4">Recent Activity</h3>
+          <h3 className="text-xl font-bold mb-4">Recent Training</h3>
            {workouts.slice(0, 5).length === 0 ? (
             <p className="text-gray-400 text-center py-8">No workouts yet</p>
           ) : (

@@ -113,6 +113,7 @@ export interface Database {
           user_id: string
           log_date: string
           weight: number | null
+          shoulders: number | null
           body_fat_percentage: number | null
           muscle_mass: number | null
           chest: number | null
@@ -128,6 +129,7 @@ export interface Database {
           user_id: string
           log_date: string
           weight?: number | null
+          shoulders?: number | null
           body_fat_percentage?: number | null
           muscle_mass?: number | null
           chest?: number | null
@@ -140,6 +142,7 @@ export interface Database {
         Update: {
           log_date?: string
           weight?: number | null
+          shoulders?: number | null
           body_fat_percentage?: number | null
           muscle_mass?: number | null
           chest?: number | null

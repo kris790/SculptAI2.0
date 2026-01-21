@@ -7,15 +7,30 @@ type ProgressLog = Database['public']['Tables']['progress_logs']['Row']
 type ProgressLogInsert = Database['public']['Tables']['progress_logs']['Insert']
 type ProgressLogUpdate = Database['public']['Tables']['progress_logs']['Update']
 
+const DUMMY_LOGS: ProgressLog[] = [
+  {
+    id: 'l-1', user_id: 'guest', log_date: new Date().toISOString(), weight: 182, shoulders: 124, waist: 81,
+    body_fat_percentage: 14.5, muscle_mass: 92, chest: 108, hips: 94, arms: 38, thighs: 61, notes: 'Peak performance week.', created_at: ''
+  },
+  {
+    id: 'l-2', user_id: 'guest', log_date: new Date(Date.now() - 604800000).toISOString(), weight: 183.5, shoulders: 122, waist: 82.5,
+    body_fat_percentage: 15.2, muscle_mass: 91.5, chest: 106, hips: 95, arms: 37.5, thighs: 60, notes: 'Started new volume block.', created_at: ''
+  },
+  {
+    id: 'l-3', user_id: 'guest', log_date: new Date(Date.now() - 1209600000).toISOString(), weight: 185, shoulders: 121, waist: 84,
+    body_fat_percentage: 16.0, muscle_mass: 91, chest: 105, hips: 96, arms: 37, thighs: 59, notes: 'Initial baseline.', created_at: ''
+  }
+];
+
 export function useProgressLogs() {
   const { user } = useAuth()
-  const [logs, setLogs] = useState<ProgressLog[]>([])
+  const [logs, setLogs] = useState<ProgressLog[]>(DUMMY_LOGS)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
   const fetchLogs = useCallback(async () => {
     if (!user) {
-        setLogs([]);
+        setLogs(DUMMY_LOGS);
         setLoading(false);
         return;
     }
@@ -31,8 +46,10 @@ export function useProgressLogs() {
         .order('log_date', { ascending: false })
 
       if (fetchError) throw fetchError
-      setLogs(data || [])
+      const finalData = data && data.length > 0 ? data : DUMMY_LOGS;
+      setLogs(finalData)
     } catch (err) {
+      setLogs(DUMMY_LOGS);
       setError(err instanceof Error ? err : new Error('Failed to fetch progress logs'))
     } finally {
       setLoading(false)
@@ -40,16 +57,30 @@ export function useProgressLogs() {
   }, [user])
 
   useEffect(() => {
-    if (user) {
-        fetchLogs();
-    } else {
-        setLoading(false);
-        setLogs([]);
-    }
+    fetchLogs();
   }, [user, fetchLogs])
 
   const createLog = async (logData: Omit<ProgressLogInsert, 'id' | 'user_id'>) => {
-    if (!user) throw new Error('User not authenticated')
+    if (!user) {
+      const newLog: ProgressLog = {
+        ...logData,
+        id: Math.random().toString(),
+        user_id: 'guest',
+        weight: logData.weight ?? null,
+        body_fat_percentage: logData.body_fat_percentage ?? null,
+        muscle_mass: logData.muscle_mass ?? null,
+        chest: logData.chest ?? null,
+        shoulders: logData.shoulders ?? null,
+        waist: logData.waist ?? null,
+        hips: logData.hips ?? null,
+        arms: logData.arms ?? null,
+        thighs: logData.thighs ?? null,
+        notes: logData.notes ?? null,
+        created_at: new Date().toISOString()
+      };
+      setLogs(prev => [newLog, ...prev]);
+      return newLog;
+    }
 
     const logToInsert: ProgressLogInsert = {
       ...logData,
@@ -77,6 +108,7 @@ export function useProgressLogs() {
   }
 
   const updateLog = async (logId: string, updates: ProgressLogUpdate) => {
+    if (!user) return;
     const { error } = await supabase
       .from('progress_logs')
       .update(updates)
@@ -87,6 +119,10 @@ export function useProgressLogs() {
   }
 
   const deleteLog = async (logId: string) => {
+    if (!user) {
+      setLogs(prev => prev.filter(l => l.id !== logId));
+      return;
+    }
     const { error } = await supabase
       .from('progress_logs')
       .delete()
