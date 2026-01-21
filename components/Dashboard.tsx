@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { useWorkouts } from '../lib/hooks/useWorkouts';
 import { useProgressLogs } from '../lib/hooks/useProgressLogs';
@@ -9,8 +8,6 @@ import ProgressDashboard from './analytics/ProgressDashboard';
 export default function Dashboard() {
   const { workouts, loading: workoutsLoading } = useWorkouts();
   const { logs, loading: logsLoading } = useProgressLogs();
-
-  if (workoutsLoading || logsLoading) return <div className="flex justify-center items-center p-8"><LoadingSpinner /></div>;
 
   const totalWorkouts = workouts.length;
   const latestLog = logs.length > 0 ? logs[0] : null;
@@ -29,6 +26,8 @@ export default function Dashboard() {
     if (weeksToComp > 4) return { name: 'The Cut', target: 1.48, color: 'emerald' };
     return { name: 'Peak Week', target: 1.50, color: 'amber' };
   }, [weeksToComp]);
+
+  if (workoutsLoading || logsLoading) return <div className="flex justify-center items-center p-8"><LoadingSpinner /></div>;
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
@@ -54,7 +53,7 @@ export default function Dashboard() {
                 <div className="flex-1 bg-slate-700 h-1.5 rounded-full overflow-hidden">
                     <div 
                         className="bg-indigo-500 h-full shadow-[0_0_8px_rgba(99,102,241,0.6)]" 
-                        style={{ width: `${Math.min(100, (parseFloat(currentRatio) / 1.5) * 100)}%` }}
+                        style={{ width: `${Math.min(100, (parseFloat(currentRatio === 'N/A' ? '0' : currentRatio) / 1.5) * 100)}%` }}
                     ></div>
                 </div>
                 <span className="text-[10px] font-bold text-indigo-400">Target 1.50</span>
