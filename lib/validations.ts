@@ -54,15 +54,23 @@ export const exerciseSchema = z.object({
 export const progressLogSchema = z.object({
   log_date: z.string(),
   weight: z.number().positive().optional(),
-  shoulders: z.number().positive().optional(),
+  // Ranges based on PRD: Shoulders 30-70" (~76-178cm), Waist 20-50" (~51-127cm)
+  shoulders: z.number()
+    .min(70, 'Shoulder measurement is too low (min ~30")')
+    .max(180, 'Shoulder measurement is too high (max ~70")'),
   body_fat_percentage: z.number().min(0).max(100).optional(),
   muscle_mass: z.number().positive().optional(),
   chest: z.number().positive().optional(),
-  waist: z.number().positive().optional(),
+  waist: z.number()
+    .min(50, 'Waist measurement is too low (min ~20")')
+    .max(130, 'Waist measurement is too high (max ~50")'),
   hips: z.number().positive().optional(),
   arms: z.number().positive().optional(),
   thighs: z.number().positive().optional(),
   notes: z.string().max(500).optional()
+}).refine(data => data.shoulders > data.waist, {
+  message: "Shoulder measurement must be greater than waist measurement",
+  path: ["shoulders"]
 })
 
 export type ProfileFormData = z.infer<typeof profileSchema>
