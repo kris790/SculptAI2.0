@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../../components/AuthProvider'
@@ -9,16 +10,16 @@ type ProgressLogUpdate = Database['public']['Tables']['progress_logs']['Update']
 
 const DUMMY_LOGS: ProgressLog[] = [
   {
-    id: 'l-1', user_id: 'guest', log_date: new Date().toISOString(), weight: 182, shoulders: 124, waist: 81,
-    body_fat_percentage: 14.5, muscle_mass: 92, chest: 108, hips: 94, arms: 38, thighs: 61, notes: 'Peak performance week.', created_at: ''
+    id: 'l-1', user_id: 'guest', log_date: new Date().toISOString(), weight: 182, shoulders: 126.5, waist: 78.5,
+    body_fat_percentage: 10.5, muscle_mass: 94, chest: 110, hips: 92, arms: 41, thighs: 62, notes: 'Tightening up the midsection. Peak symmetry.', created_at: ''
   },
   {
-    id: 'l-2', user_id: 'guest', log_date: new Date(Date.now() - 604800000).toISOString(), weight: 183.5, shoulders: 122, waist: 82.5,
-    body_fat_percentage: 15.2, muscle_mass: 91.5, chest: 106, hips: 95, arms: 37.5, thighs: 60, notes: 'Started new volume block.', created_at: ''
+    id: 'l-2', user_id: 'guest', log_date: new Date(Date.now() - 604800000).toISOString(), weight: 183.5, shoulders: 125, waist: 80,
+    body_fat_percentage: 11.2, muscle_mass: 93, chest: 108, hips: 93, arms: 40.5, thighs: 61.5, notes: 'Focus on lateral head of the deltoids.', created_at: ''
   },
   {
-    id: 'l-3', user_id: 'guest', log_date: new Date(Date.now() - 1209600000).toISOString(), weight: 185, shoulders: 121, waist: 84,
-    body_fat_percentage: 16.0, muscle_mass: 91, chest: 105, hips: 96, arms: 37, thighs: 59, notes: 'Initial baseline.', created_at: ''
+    id: 'l-3', user_id: 'guest', log_date: new Date(Date.now() - 1209600000).toISOString(), weight: 185, shoulders: 124, waist: 82,
+    body_fat_percentage: 12.0, muscle_mass: 92, chest: 107, hips: 94, arms: 40, thighs: 61, notes: 'Baseline at start of prep.', created_at: ''
   }
 ];
 

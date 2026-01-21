@@ -1,3 +1,4 @@
+
 import { z } from 'zod'
 
 export const emailSchema = z.string().email('Invalid email address')
@@ -16,7 +17,7 @@ export const profileSchema = z.object({
   weight: z.number().positive('Weight must be positive').max(500, 'Invalid weight'),
   gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']).optional(),
   fitness_goal: z.enum(['lose_weight', 'build_muscle', 'maintain', 'improve_fitness']).optional(),
-  unit_preference: z.enum(['metric', 'imperial']).default('metric')
+  unit_preference: z.enum(['metric', 'imperial']).default('imperial')
 })
 
 export const userProfileSchema = z.object({
@@ -54,22 +55,22 @@ export const exerciseSchema = z.object({
 export const progressLogSchema = z.object({
   log_date: z.string(),
   weight: z.number().positive().optional(),
-  // Ranges based on PRD: Shoulders 30-70" (~76-178cm), Waist 20-50" (~51-127cm)
+  // Metric (CM) ranges: Shoulders 70-180cm, Waist 50-130cm
   shoulders: z.number()
-    .min(70, 'Shoulder measurement is too low (min ~30")')
-    .max(180, 'Shoulder measurement is too high (max ~70")'),
-  body_fat_percentage: z.number().min(0).max(100).optional(),
+    .min(70, 'Shoulder measurement is too low for adult competition standards')
+    .max(180, 'Shoulder measurement exceeds expected range'),
+  body_fat_percentage: z.number().min(3, 'Body fat must be at least 3%').max(50, 'Out of competitive range').optional(),
   muscle_mass: z.number().positive().optional(),
   chest: z.number().positive().optional(),
   waist: z.number()
-    .min(50, 'Waist measurement is too low (min ~20")')
-    .max(130, 'Waist measurement is too high (max ~50")'),
+    .min(50, 'Waist measurement is too low')
+    .max(130, 'Waist measurement exceeds expected range'),
   hips: z.number().positive().optional(),
   arms: z.number().positive().optional(),
   thighs: z.number().positive().optional(),
   notes: z.string().max(500).optional()
 }).refine(data => data.shoulders > data.waist, {
-  message: "Shoulder measurement must be greater than waist measurement",
+  message: "Shoulder circumference must exceed waist circumference for valid ratio tracking",
   path: ["shoulders"]
 })
 

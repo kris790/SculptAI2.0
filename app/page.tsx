@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -29,9 +30,9 @@ export default function Home() {
           const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
           const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
-            contents: `As an expert physique coach for SculptAI, provide a 2-sentence motivating tip for a user with goal: ${profile?.fitness_goal || 'fitness improvement'}. Focus on the V-Taper aesthetic.`,
+            contents: `As an elite physique competition coach for V-Taper Pro, provide a sharp, professional 2-sentence tip for an athlete. Current goal: ${profile?.fitness_goal || 'physique development'}. Focus on reaching the 1.5:1 shoulder-to-waist ratio golden standard.`,
           });
-          setAiInsight(response.text || "Focus on consistency to sculpt your best self.");
+          setAiInsight(response.text || "Prioritize high-volume lateral raise variations to widen your frame while maintaining a tight caloric deficit to shrink the midsection.");
         } catch (err) {
           console.error(err);
         } finally {
@@ -63,16 +64,22 @@ export default function Home() {
       <header className="sticky top-0 z-50 bg-[#0f172a]/80 backdrop-blur-md border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg">
-              <span className="text-white font-black text-xl">S</span>
+            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/40">
+              <span className="text-white font-black text-xl">V</span>
             </div>
             <h1 className="text-xl font-bold tracking-tight text-white">
-              Sculpt<span className="text-indigo-400">AI</span>
+              V-Taper<span className="text-indigo-400">Pro</span>
             </h1>
           </div>
-          <button onClick={signOut} className="text-sm font-semibold text-slate-400 hover:text-red-400 transition-colors">
-            Sign Out
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full">
+              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+              <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Comp Prep Mode</span>
+            </div>
+            <button onClick={signOut} className="text-sm font-semibold text-slate-400 hover:text-red-400 transition-colors">
+              Sign Out
+            </button>
+          </div>
         </div>
       </header>
 
@@ -80,23 +87,24 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-2">
             {[
-              { id: 'dashboard', label: 'Dashboard' },
-              { id: 'log', label: 'Workout' },
-              { id: 'history', label: 'History' },
-              { id: 'progress', label: 'Progress' },
-              { id: 'community', label: 'Social' },
-              { id: 'coaches', label: 'Coaches' },
-              { id: 'profile', label: 'Profile' },
+              { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+              { id: 'progress', label: 'Physique', icon: '📏' },
+              { id: 'log', label: 'Train', icon: '⚡' },
+              { id: 'history', label: 'Logs', icon: '📋' },
+              { id: 'community', label: 'Network', icon: '👥' },
+              { id: 'coaches', label: 'Pros', icon: '🏆' },
+              { id: 'profile', label: 'Profile', icon: '👤' },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`py-4 px-4 border-b-2 font-medium text-sm transition-all whitespace-nowrap ${
+                className={`py-4 px-4 border-b-2 font-medium text-sm transition-all whitespace-nowrap flex items-center gap-2 ${
                   activeTab === tab.id
                     ? 'border-indigo-500 text-white bg-indigo-500/5'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                    : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'
                 }`}
               >
+                <span>{tab.icon}</span>
                 {tab.label}
               </button>
             ))}
@@ -106,14 +114,15 @@ export default function Home() {
 
       {activeTab === 'dashboard' && aiInsight && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-          <div className="bg-indigo-600/10 border border-indigo-500/30 rounded-2xl p-6 shadow-xl flex gap-4">
-             <div className="p-3 bg-indigo-600 rounded-xl h-fit">
+          <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600/10 via-slate-800/50 to-purple-600/10 border border-indigo-500/30 rounded-2xl p-6 shadow-xl flex gap-4">
+             <div className="p-3 bg-indigo-600 rounded-xl h-fit shadow-lg shadow-indigo-600/20">
                 <SparklesIcon className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <h3 className="text-xs font-bold text-indigo-300 uppercase tracking-widest mb-1">Physique AI Insight</h3>
-                <p className="text-white font-medium italic">{aiInsight}</p>
+              <div className="relative z-10">
+                <h3 className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.2em] mb-1">Coach Insight</h3>
+                <p className="text-white text-lg font-medium italic leading-snug">"{aiInsight}"</p>
               </div>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full"></div>
           </div>
         </div>
       )}

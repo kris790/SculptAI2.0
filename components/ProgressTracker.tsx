@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react'
 import { useProgressLogs } from '../lib/hooks/useProgressLogs'
 import { useAsyncAction } from '../lib/hooks/useAsyncAction'
@@ -13,6 +14,8 @@ import {
   Tooltip, 
   ResponsiveContainer,
   ReferenceLine,
+  AreaChart,
+  Area
 } from 'recharts'
 
 const IN_TO_CM = 2.54;
@@ -26,7 +29,7 @@ export default function ProgressTracker() {
   const { execute, loading, error, clearError } = useAsyncAction()
   
   const [showForm, setShowForm] = useState(false)
-  const [unit, setUnit] = useState<'cm' | 'in'>('cm')
+  const [unit, setUnit] = useState<'cm' | 'in'>('in') // Default to inches for US competitors
   const [formData, setFormData] = useState({
     log_date: new Date().toISOString().split('T')[0],
     weight: '',
@@ -43,7 +46,6 @@ export default function ProgressTracker() {
 
   const [formValidationErrors, setFormValidationErrors] = useState<Record<string, string>>({})
 
-  // Prepare chart data for V-Taper ratio evolution
   const chartData = useMemo(() => {
     return [...logs]
       .filter(log => log.shoulders && log.waist)
@@ -51,13 +53,14 @@ export default function ProgressTracker() {
       .map(log => ({
         date: new Date(log.log_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
         ratio: Number((log.shoulders! / log.waist!).toFixed(2)),
-        weight: log.weight
+        shoulders: unit === 'in' ? cmToIn(log.shoulders!) : log.shoulders,
+        waist: unit === 'in' ? cmToIn(log.waist!) : log.waist,
       }));
-  }, [logs]);
+  }, [logs, unit]);
 
-  const latestRatio = useMemo(() => {
+  const latestStats = useMemo(() => {
     if (chartData.length === 0) return null;
-    return chartData[chartData.length - 1].ratio;
+    return chartData[chartData.length - 1];
   }, [chartData]);
 
   const idealShoulderTarget = useMemo(() => {
@@ -68,14 +71,12 @@ export default function ProgressTracker() {
 
   const handleUnitToggle = (newUnit: 'cm' | 'in') => {
     if (newUnit === unit) return;
-    
     const convert = (val: string) => {
       if (!val) return '';
       const num = parseFloat(val);
       if (isNaN(num)) return val;
       return newUnit === 'in' ? cmToIn(num).toString() : inToCm(num).toString();
     };
-
     setFormData(prev => ({
       ...prev,
       shoulders: convert(prev.shoulders),
@@ -85,7 +86,6 @@ export default function ProgressTracker() {
       arms: convert(prev.arms),
       thighs: convert(prev.thighs)
     }));
-    
     setUnit(newUnit);
   };
 
@@ -106,12 +106,7 @@ export default function ProgressTracker() {
       weight: formData.weight ? parseFloat(formData.weight) : undefined,
       shoulders: processVal(formData.shoulders),
       body_fat_percentage: formData.body_fat_percentage ? parseFloat(formData.body_fat_percentage) : undefined,
-      muscle_mass: formData.muscle_mass ? parseFloat(formData.muscle_mass) : undefined,
-      chest: processVal(formData.chest),
       waist: processVal(formData.waist),
-      hips: processVal(formData.hips),
-      arms: processVal(formData.arms),
-      thighs: processVal(formData.thighs),
       notes: formData.notes || undefined
     }
 
@@ -148,20 +143,6 @@ export default function ProgressTracker() {
     }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      timeZone: 'UTC'
-    })
-  }
-
-  const calculateRatio = (shoulders: number | null, waist: number | null) => {
-    if (!shoulders || !waist) return null;
-    return (shoulders / waist).toFixed(2);
-  };
-
   const displayVal = (cm: number | null | undefined) => {
     if (cm === null || cm === undefined) return '--';
     return unit === 'in' ? cmToIn(cm) : cm;
@@ -170,284 +151,221 @@ export default function ProgressTracker() {
   if (logsLoading) return <div className="flex justify-center p-8"><LoadingSpinner /></div>
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="max-w-5xl mx-auto space-y-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-white tracking-tight">Physique Analytics</h2>
-          <p className="text-slate-400">Precision monitoring for your aesthetic development.</p>
+          <h2 className="text-3xl font-black text-white tracking-tight uppercase italic">Ratio Analytics</h2>
+          <p className="text-slate-400">Achieving the 1.50 competitive standard.</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="bg-slate-800 p-1 rounded-xl border border-slate-700 flex">
-            <button 
-              onClick={() => handleUnitToggle('cm')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${unit === 'cm' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-              Metric (cm)
-            </button>
-            <button 
-              onClick={() => handleUnitToggle('in')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${unit === 'in' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-              Imperial (in)
-            </button>
-          </div>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
-          >
-            {showForm ? 'Cancel Entry' : '+ Log New Data'}
-          </button>
-        </div>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-black uppercase italic tracking-widest hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 active:scale-95"
+        >
+          {showForm ? 'Cancel Entry' : 'Log Measurements'}
+        </button>
       </div>
 
-      {/* Visual Trends Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-slate-800/50 border border-slate-700 rounded-2xl p-6 shadow-xl">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <span className="text-indigo-400">📈</span> V-Taper Ratio Trend
-            </h3>
-            {latestRatio && (
-              <div className="text-right">
-                <span className="text-xs text-slate-500 uppercase font-black tracking-widest">Current Ratio</span>
-                <p className="text-2xl font-black text-indigo-400">{latestRatio}</p>
-              </div>
-            )}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Main Chart Section */}
+        <div className="lg:col-span-3 bg-slate-800/40 border border-slate-700 rounded-3xl p-6 shadow-2xl backdrop-blur-sm">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Ratio Trajectory</p>
+              <h3 className="text-xl font-black text-white italic uppercase">Historical V-Taper</h3>
+            </div>
+            <div className="flex gap-2 bg-slate-900/80 p-1 rounded-xl border border-slate-700">
+               <button onClick={() => handleUnitToggle('in')} className={`px-3 py-1 text-[10px] font-black uppercase rounded-lg transition-all ${unit === 'in' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>IN</button>
+               <button onClick={() => handleUnitToggle('cm')} className={`px-3 py-1 text-[10px] font-black uppercase rounded-lg transition-all ${unit === 'cm' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>CM</button>
+            </div>
           </div>
           
-          <div className="h-[240px] w-full">
+          <div className="h-[320px] w-full">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
-                  <XAxis 
-                    dataKey="date" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#94a3b8', fontSize: 12 }}
-                  />
-                  <YAxis 
-                    domain={[1.0, 2.0]} 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#94a3b8', fontSize: 12 }}
-                  />
+                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorRatio" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.5} />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10, fontWeight: 700 }} />
+                  <YAxis domain={[1.1, 1.7]} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10, fontWeight: 700 }} />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '12px' }}
-                    itemStyle={{ color: '#818cf8', fontWeight: 'bold' }}
+                    contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '16px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}
+                    itemStyle={{ color: '#818cf8', fontWeight: 'bold', fontSize: '12px' }}
                   />
                   <ReferenceLine 
                     y={IDEAL_RATIO} 
                     stroke="#fbbf24" 
-                    strokeDasharray="5 5" 
-                    label={{ value: 'Ideal (1.50)', position: 'insideBottomRight', fill: '#fbbf24', fontSize: 10, fontWeight: 'bold' }} 
+                    strokeDasharray="8 8" 
+                    label={{ value: 'Pro Standard (1.50)', position: 'insideBottomRight', fill: '#fbbf24', fontSize: 10, fontWeight: 'bold', letterSpacing: '0.1em' }} 
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="ratio" 
-                    stroke="#6366f1" 
-                    strokeWidth={4} 
-                    dot={{ fill: '#6366f1', strokeWidth: 2, r: 4, stroke: '#1e293b' }}
-                    activeDot={{ r: 6, fill: '#818cf8' }}
-                  />
-                </LineChart>
+                  <Area type="monotone" dataKey="ratio" stroke="#6366f1" strokeWidth={4} fillOpacity={1} fill="url(#colorRatio)" />
+                  <Line type="monotone" dataKey="ratio" stroke="#818cf8" strokeWidth={0} dot={{ fill: '#818cf8', r: 4 }} activeDot={{ r: 6, fill: '#fff' }} />
+                </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-slate-500 bg-slate-900/50 rounded-xl border border-dashed border-slate-700">
-                <p>Log 2+ entries to visualize your trajectory.</p>
+              <div className="h-full flex flex-col items-center justify-center text-slate-500 bg-slate-900/30 rounded-3xl border border-dashed border-slate-700/50">
+                <p className="font-bold uppercase tracking-widest text-xs">Awaiting competition data...</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Quick Insights Card */}
-        <div className="bg-indigo-600/10 border border-indigo-500/20 rounded-2xl p-6 flex flex-col justify-between">
-          <div>
-            <h3 className="text-indigo-300 font-bold uppercase text-xs tracking-widest mb-4">Aesthetic Objective</h3>
-            <p className="text-slate-300 text-sm leading-relaxed">
-              Your V-Taper score is a unit-independent mathematical representation of your physical aesthetic. 
-              <br/><br/>
-              By minimizing the waist and maximizing shoulder width, you work toward the <span className="text-white font-bold">1.50+</span> competitive standard.
-            </p>
-          </div>
-          <div className="pt-4 mt-4 border-t border-indigo-500/10">
-            <p className="text-xs text-indigo-400 font-medium italic">
-              * Measurements should be taken at the peak of the shoulder and narrowest point of the waist.
-            </p>
-          </div>
+        {/* Sidebar Insights */}
+        <div className="space-y-6">
+           <div className="bg-indigo-600/10 border border-indigo-500/30 rounded-3xl p-6 shadow-xl">
+              <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4">Metric Focus</h4>
+              <div className="space-y-4">
+                <div>
+                   <p className="text-xs text-slate-400 font-bold uppercase mb-1">Shoulders</p>
+                   <p className="text-2xl font-black text-white">{latestStats?.shoulders || '--'} <span className="text-xs text-slate-500">{unit}</span></p>
+                </div>
+                <div>
+                   <p className="text-xs text-slate-400 font-bold uppercase mb-1">Waist</p>
+                   <p className="text-2xl font-black text-white">{latestStats?.waist || '--'} <span className="text-xs text-slate-500">{unit}</span></p>
+                </div>
+              </div>
+           </div>
+
+           <div className="bg-slate-800/80 border border-slate-700 rounded-3xl p-6">
+              <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Aesthetic Rule</h4>
+              <p className="text-xs text-slate-400 leading-relaxed italic">
+                "Width is built in the gym, taper is revealed in the kitchen."
+              </p>
+              <div className="mt-4 pt-4 border-t border-slate-700">
+                <p className="text-[10px] font-black text-amber-500 uppercase">Target Ratio: 1.50</p>
+              </div>
+           </div>
         </div>
       </div>
 
       {showForm && (
-        <div className="bg-slate-800 rounded-2xl shadow-2xl p-6 mb-6 border border-slate-700 animate-fade-in ring-1 ring-indigo-500/20">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-bold text-white">Log Measurements</h3>
-            <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-white transition-colors">&times;</button>
+        <div className="bg-slate-800 rounded-3xl shadow-2xl p-8 mb-6 border border-slate-700 animate-fade-in ring-2 ring-indigo-500/20">
+          <div className="flex justify-between items-center mb-8">
+            <h3 className="text-2xl font-black text-white uppercase italic tracking-tight">Entry Verification</h3>
+            <button onClick={() => setShowForm(false)} className="text-slate-500 hover:text-white transition-colors text-3xl leading-none">&times;</button>
           </div>
+          
           {error && <ErrorMessage error={error} onDismiss={clearError} />}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Entry Date</label>
-                <input
-                  type="date"
-                  value={formData.log_date}
-                  onChange={(e) => setFormData({ ...formData, log_date: e.target.value })}
-                  required
-                  className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white"
-                />
+          <form onSubmit={handleSubmit} className="space-y-8">
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+               <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Entry Date</label>
+                <input type="date" value={formData.log_date} onChange={(e) => setFormData({ ...formData, log_date: e.target.value })} required className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 text-white font-bold" />
               </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Weight (lbs)</label>
-                <input type="number" step="0.1" value={formData.weight} onChange={(e) => setFormData({ ...formData, weight: e.target.value })} placeholder="0.0" className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white" />
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Weight (lbs)</label>
+                <input type="number" step="0.1" value={formData.weight} onChange={(e) => setFormData({ ...formData, weight: e.target.value })} placeholder="0.0" className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 text-white font-bold" />
               </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Body Fat %</label>
-                <input type="number" step="0.1" value={formData.body_fat_percentage} onChange={(e) => setFormData({ ...formData, body_fat_percentage: e.target.value })} placeholder="0.0" className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white" />
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Body Fat %</label>
+                <input type="number" step="0.1" value={formData.body_fat_percentage} onChange={(e) => setFormData({ ...formData, body_fat_percentage: e.target.value })} placeholder="0.0" className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 text-white font-bold" />
               </div>
             </div>
 
-            <div className="p-5 bg-indigo-500/5 border border-indigo-500/30 rounded-2xl">
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="text-sm font-black text-indigo-400 flex items-center gap-2 tracking-widest uppercase">
-                  <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-                  Core V-Taper Profile ({unit})
-                </h4>
-                {idealShoulderTarget && (
-                  <span className="text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-1 rounded font-bold uppercase tracking-tighter">
-                    Ideal Shoulders: {idealShoulderTarget} {unit}
-                  </span>
-                )}
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                    Shoulders ({unit}) <span className="text-indigo-400 text-lg">*</span>
-                  </label>
+            <div className="p-8 bg-indigo-500/5 border border-indigo-500/20 rounded-3xl relative overflow-hidden">
+              <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-12">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-end">
+                    <label className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">Shoulder Circumference ({unit})</label>
+                    {idealShoulderTarget && (
+                       <span className="text-[8px] font-black bg-amber-500 text-black px-1.5 py-0.5 rounded uppercase">Target: {idealShoulderTarget}</span>
+                    )}
+                  </div>
                   <input 
-                    type="number" 
-                    step="0.1" 
-                    value={formData.shoulders} 
+                    type="number" step="0.1" value={formData.shoulders} 
                     onChange={(e) => setFormData({ ...formData, shoulders: e.target.value })} 
-                    placeholder="Circumference" 
-                    required
-                    className={`w-full px-4 py-3 bg-slate-900 border ${formValidationErrors.shoulders ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'border-indigo-500/30'} rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white font-bold text-lg`} 
+                    placeholder="0.0" required
+                    className={`w-full px-6 py-4 bg-slate-950 border ${formValidationErrors.shoulders ? 'border-red-500' : 'border-indigo-500/50'} rounded-2xl text-4xl font-black text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center`} 
                   />
-                  {formValidationErrors.shoulders && <p className="text-red-400 text-[10px] mt-1 font-bold uppercase">{formValidationErrors.shoulders}</p>}
+                  {formValidationErrors.shoulders && <p className="text-red-400 text-[10px] font-bold uppercase text-center">{formValidationErrors.shoulders}</p>}
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                    Waist ({unit}) <span className="text-indigo-400 text-lg">*</span>
-                  </label>
+
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-indigo-300 uppercase tracking-widest block">Waist Circumference ({unit})</label>
                   <input 
-                    type="number" 
-                    step="0.1" 
-                    value={formData.waist} 
+                    type="number" step="0.1" value={formData.waist} 
                     onChange={(e) => setFormData({ ...formData, waist: e.target.value })} 
-                    placeholder="Circumference" 
-                    required
-                    className={`w-full px-4 py-3 bg-slate-900 border ${formValidationErrors.waist ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'border-indigo-500/30'} rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white font-bold text-lg`} 
+                    placeholder="0.0" required
+                    className={`w-full px-6 py-4 bg-slate-950 border ${formValidationErrors.waist ? 'border-red-500' : 'border-indigo-500/50'} rounded-2xl text-4xl font-black text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center`} 
                   />
-                  {formValidationErrors.waist && <p className="text-red-400 text-[10px] mt-1 font-bold uppercase">{formValidationErrors.waist}</p>}
+                  {formValidationErrors.waist && <p className="text-red-400 text-[10px] font-bold uppercase text-center">{formValidationErrors.waist}</p>}
                 </div>
               </div>
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-50"></div>
             </div>
 
-            <div>
-              <h4 className="text-xs font-bold text-slate-400 mb-4 uppercase tracking-[0.2em]">Auxiliary Measurements ({unit})</h4>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="space-y-1">
-                   <span className="text-[10px] font-bold text-slate-600 uppercase">Chest</span>
-                   <input type="number" step="0.1" value={formData.chest} onChange={(e) => setFormData({ ...formData, chest: e.target.value })} placeholder="0.0" className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm" />
-                </div>
-                <div className="space-y-1">
-                   <span className="text-[10px] font-bold text-slate-600 uppercase">Hips</span>
-                   <input type="number" step="0.1" value={formData.hips} onChange={(e) => setFormData({ ...formData, hips: e.target.value })} placeholder="0.0" className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm" />
-                </div>
-                <div className="space-y-1">
-                   <span className="text-[10px] font-bold text-slate-600 uppercase">Arms</span>
-                   <input type="number" step="0.1" value={formData.arms} onChange={(e) => setFormData({ ...formData, arms: e.target.value })} placeholder="0.0" className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm" />
-                </div>
-                <div className="space-y-1">
-                   <span className="text-[10px] font-bold text-slate-600 uppercase">Thighs</span>
-                   <input type="number" step="0.1" value={formData.thighs} onChange={(e) => setFormData({ ...formData, thighs: e.target.value })} placeholder="0.0" className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm" />
-                </div>
-              </div>
-            </div>
-
-            <textarea 
-              value={formData.notes} 
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })} 
-              placeholder="Session notes: dietary changes, recovery status, or workout emphasis..." 
-              rows={2} 
-              className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white text-sm" 
-            />
-
-            <button type="submit" disabled={loading} className="w-full bg-indigo-600 text-white py-4 px-6 rounded-xl hover:bg-indigo-500 disabled:opacity-50 font-black text-lg transition-all shadow-xl shadow-indigo-600/20 active:scale-[0.98] flex items-center justify-center gap-3">
-              {loading ? <LoadingSpinner size="sm" /> : <>Log Physique Stats <span className="text-xl">💪</span></>}
+            <button type="submit" disabled={loading} className="w-full bg-indigo-600 text-white py-5 px-8 rounded-2xl hover:bg-indigo-500 disabled:opacity-50 font-black text-xl uppercase italic tracking-widest transition-all shadow-2xl shadow-indigo-600/30 active:scale-[0.98] flex items-center justify-center gap-4">
+              {loading ? <LoadingSpinner size="sm" /> : <>Finalize Entry <span className="text-2xl">🔥</span></>}
             </button>
           </form>
         </div>
       )}
 
-      {/* Logs List Section */}
+      {/* History List */}
       <div className="space-y-4">
-        <h3 className="text-xl font-bold text-white px-2 mb-4">Historical Progression</h3>
+        <h3 className="text-sm font-black text-slate-500 uppercase tracking-[0.2em] px-2 mb-6">Historical Progression</h3>
         {logs.length === 0 ? (
-          <div className="text-center py-20 bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-700">
-            <p className="text-slate-500 text-lg">No measurement logs available. Start your tracking journey above.</p>
+          <div className="text-center py-20 bg-slate-800/30 rounded-3xl border-2 border-dashed border-slate-700/50">
+            <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">No data recorded.</p>
           </div>
         ) : (
           logs.map((log) => {
-            const ratio = calculateRatio(log.shoulders, log.waist);
+            const ratio = log.shoulders && log.waist ? (log.shoulders / log.waist).toFixed(2) : null;
             return (
-              <div key={log.id} className="group bg-slate-800/80 border border-slate-700 rounded-2xl p-6 shadow-md hover:border-indigo-500/50 transition-all">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-slate-700 p-2.5 rounded-xl group-hover:bg-indigo-600/20 transition-colors">
-                        <span className="text-xl">📅</span>
+              <div key={log.id} className="group bg-slate-800/50 border border-slate-700 rounded-3xl p-6 shadow-lg hover:border-indigo-500/50 transition-all">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-slate-700/50 p-3 rounded-2xl">
+                        <span className="text-xl">📊</span>
                       </div>
-                      <h3 className="text-lg font-bold text-white">{formatDate(log.log_date)}</h3>
+                      <div>
+                        <h3 className="text-lg font-black text-white italic">{new Date(log.log_date).toLocaleDateString(undefined, { timeZone: 'UTC' })}</h3>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Validated Session</p>
+                      </div>
                     </div>
+                    
                     {ratio && (
-                        <div className="bg-indigo-500/10 px-4 py-2 rounded-xl border border-indigo-500/20 flex items-center gap-3">
-                            <span className="text-[10px] text-indigo-400 uppercase tracking-widest font-black">V-Taper Ratio</span>
-                            <span className="text-xl text-white font-black">{ratio}</span>
+                        <div className="flex items-center gap-4">
+                            <div className="text-right">
+                                <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Ratio</p>
+                                <p className="text-2xl font-black text-indigo-400">{ratio}</p>
+                            </div>
+                            <div className="w-px h-10 bg-slate-700"></div>
+                            <div className="text-right">
+                                <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Weight</p>
+                                <p className="text-2xl font-black text-white">{log.weight || '--'} <span className="text-xs text-slate-500">lbs</span></p>
+                            </div>
                         </div>
                     )}
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-4 bg-slate-900/40 rounded-xl border border-slate-700/50">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase mb-1">Weight</span>
-                    <span className="text-lg font-bold text-slate-100">{log.weight || '--'} lbs</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-indigo-400 uppercase mb-1">Shoulders</span>
-                    <span className="text-lg font-bold text-white">{displayVal(log.shoulders)} {unit}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-indigo-400 uppercase mb-1">Waist</span>
-                    <span className="text-lg font-bold text-white">{displayVal(log.waist)} {unit}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-emerald-400 uppercase mb-1">Body Fat</span>
-                    <span className="text-lg font-bold text-white">{log.body_fat_percentage ? `${log.body_fat_percentage}%` : '--'}</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 px-2">
-                  <div className="text-xs text-slate-400"><span className="font-bold text-slate-600 mr-2 uppercase">Chest:</span>{displayVal(log.chest)} {unit}</div>
-                  <div className="text-xs text-slate-400"><span className="font-bold text-slate-600 mr-2 uppercase">Hips:</span>{displayVal(log.hips)} {unit}</div>
-                  <div className="text-xs text-slate-400"><span className="font-bold text-slate-600 mr-2 uppercase">Arms:</span>{displayVal(log.arms)} {unit}</div>
-                  <div className="text-xs text-slate-400"><span className="font-bold text-slate-600 mr-2 uppercase">Thighs:</span>{displayVal(log.thighs)} {unit}</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8 p-6 bg-slate-900/60 rounded-2xl border border-slate-700/50">
+                   <div className="space-y-1">
+                      <p className="text-[10px] font-black text-slate-600 uppercase">Shoulders</p>
+                      <p className="text-xl font-black text-white">{displayVal(log.shoulders)} {unit}</p>
+                   </div>
+                   <div className="space-y-1">
+                      <p className="text-[10px] font-black text-slate-600 uppercase">Waist</p>
+                      <p className="text-xl font-black text-white">{displayVal(log.waist)} {unit}</p>
+                   </div>
+                   <div className="space-y-1">
+                      <p className="text-[10px] font-black text-slate-600 uppercase">Body Fat</p>
+                      <p className="text-xl font-black text-emerald-400">{log.body_fat_percentage ? `${log.body_fat_percentage}%` : '--'}</p>
+                   </div>
+                   <div className="space-y-1">
+                      <p className="text-[10px] font-black text-slate-600 uppercase">Delta</p>
+                      <p className="text-xl font-black text-indigo-400">+{((log.shoulders || 0) - (log.waist || 0)).toFixed(1)} <span className="text-xs text-slate-600">cm</span></p>
+                   </div>
                 </div>
 
                 {log.notes && (
-                  <div className="mt-6 pt-4 border-t border-slate-700/50">
-                    <p className="text-slate-400 text-sm italic leading-relaxed">
+                  <div className="mt-6 pt-4 border-t border-slate-700/30">
+                    <p className="text-slate-400 text-xs italic font-medium leading-relaxed">
                       "{log.notes}"
                     </p>
                   </div>
