@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from './AuthProvider';
 import { supabase } from '../lib/supabaseClient';
@@ -86,60 +87,79 @@ export default function UserProfile() {
   if (loading && !profile) return <LoadingSpinner />;
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-gray-800 rounded-lg shadow-md border border-gray-700">
+    <div className="max-w-2xl mx-auto p-6 bg-slate-900 rounded-[2rem] shadow-md border border-slate-800">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Your Profile</h2>
-        {saveStatus === 'saved' && <span className="text-green-400 text-sm">✓ Saved</span>}
-        {saveStatus === 'saving' && <span className="text-indigo-400 text-sm animate-pulse">Saving...</span>}
+        <h2 className="text-2xl font-black text-white uppercase italic tracking-tight">Your Profile</h2>
+        {saveStatus === 'saved' && <span className="text-green-400 text-sm font-bold uppercase tracking-widest">✓ Synchronized</span>}
+        {saveStatus === 'saving' && <span className="text-indigo-400 text-sm animate-pulse font-bold uppercase tracking-widest">Saving...</span>}
       </div>
 
       {error && <ErrorMessage error={error} onDismiss={clearError} />}
 
       <div className="space-y-6">
         {/* Social Profile Section */}
-        <div className="space-y-4 p-4 border border-gray-600 rounded-lg">
-            <h3 className="text-lg font-semibold text-indigo-400">Public Profile</h3>
+        <div className="space-y-4 p-6 border border-white/5 bg-white/[0.02] rounded-3xl">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Public Protocol</h3>
             <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Username</label>
-                <input type="text" value={userProfileData.username || ''} onChange={(e) => setUserProfileData(p => ({...p, username: e.target.value}))} className="w-full input-style" />
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Username</label>
+                <input type="text" value={userProfileData.username || ''} onChange={(e) => setUserProfileData(p => ({...p, username: e.target.value}))} className="w-full input-style text-white" />
                 {validationErrors.username && <p className="mt-1 text-sm text-red-400">{validationErrors.username}</p>}
             </div>
             <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Bio</label>
-                <textarea value={userProfileData.bio || ''} onChange={(e) => setUserProfileData(p => ({...p, bio: e.target.value}))} rows={2} className="w-full input-style" />
-            </div>
-             <div className="flex items-center">
-                <input type="checkbox" id="is_visible" checked={userProfileData.is_visible} onChange={(e) => setUserProfileData(p => ({...p, is_visible: e.target.checked}))} className="h-4 w-4 rounded bg-gray-700 border-gray-600 text-indigo-600 focus:ring-indigo-500" />
-                <label htmlFor="is_visible" className="ml-2 block text-sm text-gray-300">Make profile public</label>
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Profile Visibility</label>
+                <div className="flex items-center mt-2">
+                    <input type="checkbox" id="is_visible" checked={userProfileData.is_visible} onChange={(e) => setUserProfileData(p => ({...p, is_visible: e.target.checked}))} className="h-5 w-5 rounded bg-slate-800 border-slate-700 text-indigo-600 focus:ring-indigo-500 transition-all" />
+                    <label htmlFor="is_visible" className="ml-3 block text-sm font-medium text-slate-300">Public profile on network</label>
+                </div>
             </div>
         </div>
 
         {/* Private Profile Section */}
-        <div className="space-y-4 p-4 border border-gray-600 rounded-lg">
-            <h3 className="text-lg font-semibold text-indigo-400">Private Details</h3>
+        <div className="space-y-4 p-6 border border-white/5 bg-white/[0.02] rounded-3xl">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Biological Baseline</h3>
             <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Full Name</label>
-                <input type="text" value={formData.full_name || ''} onChange={(e) => setFormData(p => ({...p, full_name: e.target.value}))} className="w-full input-style" />
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Full Name</label>
+                <input type="text" value={formData.full_name || ''} onChange={(e) => setFormData(p => ({...p, full_name: e.target.value}))} className="w-full input-style text-white" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input type="number" placeholder="Age" value={formData.age || ''} onChange={(e) => setFormData(p => ({...p, age: e.target.value ? parseInt(e.target.value) : undefined}))} className="w-full input-style" />
-                <select value={formData.gender || ''} onChange={(e) => setFormData(p => ({...p, gender: e.target.value as any}))} className="w-full input-style">
-                    <option value="">Gender...</option>
-                    <option value="male">Male</option><option value="female">Female</option><option value="other">Other</option><option value="prefer_not_to_say">Prefer not to say</option>
-                </select>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Age</label>
+                  <input type="number" placeholder="Age" value={formData.age || ''} onChange={(e) => setFormData(p => ({...p, age: e.target.value ? parseInt(e.target.value) : undefined}))} className="w-full input-style text-white" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Gender</label>
+                  <select value={formData.gender || ''} onChange={(e) => setFormData(p => ({...p, gender: e.target.value as any}))} className="w-full input-style text-white">
+                      <option value="">Gender...</option>
+                      <option value="male">Male</option><option value="female">Female</option><option value="other">Other</option><option value="prefer_not_to_say">Prefer not to say</option>
+                  </select>
+                </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input type="number" placeholder="Height (cm)" step="0.1" value={formData.height || ''} onChange={(e) => setFormData(p => ({...p, height: e.target.value ? parseFloat(e.target.value) : undefined}))} className="w-full input-style" />
-                <input type="number" placeholder="Weight (kg)" step="0.1" value={formData.weight || ''} onChange={(e) => setFormData(p => ({...p, weight: e.target.value ? parseFloat(e.target.value) : undefined}))} className="w-full input-style" />
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Height (cm)</label>
+                  <input type="number" placeholder="Height (cm)" step="0.1" value={formData.height || ''} onChange={(e) => setFormData(p => ({...p, height: e.target.value ? parseFloat(e.target.value) : undefined}))} className="w-full input-style text-white" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Weight (kg)</label>
+                  <input type="number" placeholder="Weight (kg)" step="0.1" value={formData.weight || ''} onChange={(e) => setFormData(p => ({...p, weight: e.target.value ? parseFloat(e.target.value) : undefined}))} className="w-full input-style text-white" />
+                </div>
             </div>
-            <select value={formData.fitness_goal || ''} onChange={(e) => setFormData(p => ({...p, fitness_goal: e.target.value as any}))} className="w-full input-style">
-                <option value="">Fitness Goal...</option>
-                <option value="lose_weight">Lose Weight</option><option value="build_muscle">Build Muscle</option><option value="maintain">Maintain</option><option value="improve_fitness">Improve Fitness</option>
-            </select>
+            <div>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Primary Objective</label>
+              <select value={formData.fitness_goal || ''} onChange={(e) => setFormData(p => ({...p, fitness_goal: e.target.value as any}))} className="w-full input-style text-white">
+                  <option value="">Select your trajectory...</option>
+                  <option value="lose_weight">Lose Weight / Fat Loss</option>
+                  <option value="build_muscle">Build Muscle / Hypertrophy</option>
+                  <option value="body_recomp">Body Recomposition</option>
+                  <option value="competition_prep">Competition Prep</option>
+                  <option value="maintain">Maintain Physique</option>
+                  <option value="improve_fitness">General Fitness</option>
+              </select>
+            </div>
         </div>
 
-        <button onClick={handleUpdateProfile} disabled={loading} className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 disabled:opacity-50">
-          {loading ? 'Saving...' : 'Save All Changes'}
+        <button onClick={handleUpdateProfile} disabled={loading} className="w-full bg-indigo-600 text-white py-5 px-4 rounded-2xl hover:bg-indigo-500 disabled:opacity-50 transition-all font-black uppercase italic tracking-[0.2em] shadow-xl shadow-indigo-600/20 active:scale-[0.98]">
+          {loading ? 'Processing...' : 'Synchronize Profile'}
         </button>
       </div>
     </div>
@@ -149,18 +169,21 @@ export default function UserProfile() {
 // Add a simple CSS-in-JS for the input style to avoid repetition
 const styles = `
 .input-style {
-    background-color: #374151; /* gray-700 */
-    border: 1px solid #4B5563; /* gray-600 */
-    border-radius: 0.375rem;
+    background-color: #0f172a; 
+    border: 1px solid #1e293b;
+    border-radius: 0.75rem;
     width: 100%;
-    padding: 0.5rem 0.75rem;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
 }
 .input-style:focus {
     outline: none;
-    --tw-ring-color: #6366F1; /* indigo-500 */
-    box-shadow: 0 0 0 2px var(--tw-ring-color);
+    border-color: #6366f1;
+    box-shadow: 0 0 0 1px #6366f1;
 }
 `;
-const styleSheet = document.createElement("style");
-styleSheet.innerText = styles;
-document.head.appendChild(styleSheet);
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement("style");
+  styleSheet.innerText = styles;
+  document.head.appendChild(styleSheet);
+}

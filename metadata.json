@@ -2,6 +2,7 @@
   "name": "SculptAI",
   "description": "An AI-powered guided workout app for beginners, teaching elite form and proportional sculpting from day one.",
   "requestFramePermissions": [
-    "camera"
+    "camera",
+    "microphone"
   ]
 }

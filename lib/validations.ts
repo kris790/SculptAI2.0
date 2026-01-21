@@ -16,7 +16,7 @@ export const profileSchema = z.object({
   height: z.number().positive('Height must be positive').max(300, 'Invalid height'),
   weight: z.number().positive('Weight must be positive').max(500, 'Invalid weight'),
   gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']).optional(),
-  fitness_goal: z.enum(['lose_weight', 'build_muscle', 'maintain', 'improve_fitness']).optional(),
+  fitness_goal: z.enum(['lose_weight', 'build_muscle', 'maintain', 'improve_fitness', 'body_recomp', 'competition_prep']).optional(),
   unit_preference: z.enum(['metric', 'imperial']).default('imperial')
 })
 
@@ -25,7 +25,7 @@ export const userProfileSchema = z.object({
       .min(3, 'Username must be at least 3 characters')
       .max(15, 'Username cannot be more than 15 characters')
       .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
-    bio: z.string().max(160, 'Bio cannot be more than 160 characters').optional(),
+    bio: z.string().max(10000, 'Blueprint can be very detailed').optional(),
     location: z.string().max(100, 'Location is too long').optional(),
     fitness_goals: z.array(z.string()).optional(),
     experience_level: z.enum(['Beginner', 'Intermediate', 'Advanced']).optional(),
@@ -55,23 +55,14 @@ export const exerciseSchema = z.object({
 export const progressLogSchema = z.object({
   log_date: z.string(),
   weight: z.number().positive().optional(),
-  // Metric (CM) ranges: Shoulders 70-180cm, Waist 50-130cm
-  shoulders: z.number()
-    .min(70, 'Shoulder measurement is too low for adult competition standards')
-    .max(180, 'Shoulder measurement exceeds expected range'),
-  body_fat_percentage: z.number().min(3, 'Body fat must be at least 3%').max(50, 'Out of competitive range').optional(),
-  muscle_mass: z.number().positive().optional(),
+  shoulders: z.number().positive('Shoulder measurement is required for V-Taper tracking'),
+  body_fat_percentage: z.number().min(3).max(60).optional(),
   chest: z.number().positive().optional(),
-  waist: z.number()
-    .min(50, 'Waist measurement is too low')
-    .max(130, 'Waist measurement exceeds expected range'),
-  hips: z.number().positive().optional(),
+  waist: z.number().positive('Waist measurement is required for V-Taper tracking'),
   arms: z.number().positive().optional(),
   thighs: z.number().positive().optional(),
+  calves: z.number().positive().optional(),
   notes: z.string().max(500).optional()
-}).refine(data => data.shoulders > data.waist, {
-  message: "Shoulder circumference must exceed waist circumference for valid ratio tracking",
-  path: ["shoulders"]
 })
 
 export type ProfileFormData = z.infer<typeof profileSchema>

@@ -11,18 +11,25 @@ import CommunityDashboard from './components/CommunityDashboard';
 import CoachMarketplace from './components/CoachMarketplace';
 import UserProfile from './components/UserProfile';
 import LandingPage from './components/LandingPage';
+import PosingCoach from './components/PosingCoach';
+import OnboardingWizard from './components/OnboardingWizard';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import { GoogleGenAI } from "@google/genai";
 import { SparklesIcon } from './components/icons';
 
 const MainApp = () => {
-  const { user, signOut, loading, profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'log' | 'history' | 'progress' | 'community' | 'coaches' | 'profile'>('dashboard');
+  const { user, signOut, loading, profile, refreshProfile } = useAuth();
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'log' | 'history' | 'progress' | 'community' | 'coaches' | 'profile' | 'pose'>('dashboard');
   const [aiInsight, setAiInsight] = useState<string>("");
   const [aiLoading, setAiLoading] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   
   const isGuest = !user;
+
+  // Determine if onboarding is needed
+  const needsOnboarding = useMemo(() => {
+    return user && !profile?.fitness_goal;
+  }, [user, profile]);
 
   const activeProfile = useMemo(() => profile || {
     full_name: 'Sculpt Guest',
@@ -33,7 +40,7 @@ const MainApp = () => {
   }, [profile]);
 
   const generatePhysiqueInsight = useCallback(async () => {
-    if (aiInsight || aiLoading || !user) return;
+    if (aiInsight || aiLoading || !user || needsOnboarding) return;
     setAiLoading(true);
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -60,13 +67,13 @@ const MainApp = () => {
     } finally {
       setAiLoading(false);
     }
-  }, [activeProfile, aiInsight, aiLoading, user]);
+  }, [activeProfile, aiInsight, aiLoading, user, needsOnboarding]);
 
   useEffect(() => {
-    if (activeTab === 'dashboard' && user) {
+    if (activeTab === 'dashboard' && user && !needsOnboarding) {
       generatePhysiqueInsight();
     }
-  }, [activeTab, user, generatePhysiqueInsight]);
+  }, [activeTab, user, generatePhysiqueInsight, needsOnboarding]);
 
   if (loading) {
     return (
@@ -82,6 +89,10 @@ const MainApp = () => {
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200 font-['Space_Grotesk'] selection:bg-indigo-500/30">
+      {needsOnboarding && (
+        <OnboardingWizard onComplete={() => refreshProfile()} />
+      )}
+
       <header className="sticky top-0 z-50 bg-[#0f172a]/90 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -121,6 +132,7 @@ const MainApp = () => {
           <div className="flex space-x-1">
             {[
               { id: 'dashboard', label: 'HUB', icon: '📊' },
+              { id: 'pose', label: 'POSE', icon: '📸' },
               { id: 'log', label: 'TRAIN', icon: '⚡' },
               { id: 'history', label: 'LOGS', icon: '📋' },
               { id: 'progress', label: 'SCULPT', icon: '📏' },
@@ -178,7 +190,8 @@ const MainApp = () => {
         <div className="animate-fade-in">
           {user ? (
             <>
-              {activeTab === 'dashboard' && <Dashboard />}
+              {activeTab === 'dashboard' && <Dashboard onNavigate={(tab) => setActiveTab(tab as any)} />}
+              {activeTab === 'pose' && <PosingCoach />}
               {activeTab === 'log' && <WorkoutLogger onWorkoutComplete={() => setActiveTab('history')} />}
               {activeTab === 'history' && <WorkoutHistory />}
               {activeTab === 'progress' && <ProgressTracker />}
