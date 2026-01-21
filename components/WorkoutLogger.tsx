@@ -1,11 +1,13 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { beginnerProgram } from '../data/program';
-// Fix: Corrected import to point to `lib/types.ts` where the Program and Workout types are now defined.
-import type { Program, Workout } from '../lib/types';
-import { CheckIcon, ChevronRightIcon, InfoIcon, ChevronDownIcon, TrophyIcon } from './icons';
+import type { Program, Workout, Exercise } from '../lib/types';
+import { CheckIcon, ChevronRightIcon, InfoIcon, ChevronDownIcon, TrophyIcon, SparklesIcon } from './icons';
 import { useWorkouts } from '../lib/hooks/useWorkouts';
 import { useAsyncAction } from '../lib/hooks/useAsyncAction';
 import { LoadingSpinner } from './ui/LoadingSpinner';
+import { GoogleGenAI } from "@google/genai";
+import AIFeedback from './AIFeedback';
 
 // --- Sub-component: WorkoutSelection ---
 const WorkoutSelection: React.FC<{
@@ -13,25 +15,27 @@ const WorkoutSelection: React.FC<{
   onSelectWorkout: (workoutId: string) => void;
 }> = ({ program, onSelectWorkout }) => {
   return (
-    <div className="w-full max-w-md mx-auto bg-gray-800 rounded-xl shadow-2xl overflow-hidden animate-fade-in-up">
-      <div className="p-6 md:p-8">
-        <h2 className="text-2xl font-bold text-white text-center mb-2">
+    <div className="w-full max-w-md mx-auto bg-white/[0.03] backdrop-blur-xl rounded-[2rem] shadow-2xl overflow-hidden border border-white/10">
+      <div className="p-8">
+        <h2 className="text-3xl font-black text-white text-center mb-2 uppercase italic tracking-tight">
           {program.name}
         </h2>
-        <p className="text-gray-400 text-center mb-6">Choose your workout for today.</p>
+        <p className="text-slate-500 text-center mb-8 text-sm font-bold tracking-widest uppercase">Select your protocol</p>
         <div className="space-y-4">
           {program.workouts.map((workout: Workout) => (
             <button
               key={workout.id}
               onClick={() => onSelectWorkout(workout.id)}
-              className="w-full flex justify-between items-center text-left bg-gray-700 hover:bg-gray-600 p-4 rounded-lg transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full flex justify-between items-center text-left bg-white/5 hover:bg-indigo-600/20 p-6 rounded-2xl transition-all duration-300 group border border-transparent hover:border-indigo-500/30"
               aria-label={`Start workout: ${workout.name}`}
             >
               <div>
-                <h3 className="font-semibold text-lg text-white">{workout.name}</h3>
-                <p className="text-sm text-gray-400">{workout.exercises.length} Exercises</p>
+                <h3 className="font-bold text-white text-lg group-hover:text-indigo-400 transition-colors">{workout.name}</h3>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">{workout.exercises.length} Movements • Pro-Guided</p>
               </div>
-              <ChevronRightIcon className="w-6 h-6 text-gray-500" />
+              <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-indigo-600 transition-all">
+                <ChevronRightIcon className="w-5 h-5 text-indigo-400 group-hover:text-white" />
+              </div>
             </button>
           ))}
         </div>
@@ -48,33 +52,34 @@ const WorkoutCompleteScreen: React.FC<{
   saveError: Error | null;
 }> = ({ completedWorkout, onFinish, isSaving, saveError }) => {
   return (
-    <div className="w-full max-w-md mx-auto bg-gray-800 rounded-xl shadow-2xl p-6 md:p-8 flex flex-col items-center text-center animate-fade-in-up">
-      <TrophyIcon className="w-16 h-16 text-yellow-400 mb-4" />
-      <h2 className="text-3xl font-bold text-white">
-        {isSaving ? 'Saving Workout...' : saveError ? 'Error Saving' : 'Workout Complete!'}
+    <div className="w-full max-w-md mx-auto bg-white/[0.03] backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-10 flex flex-col items-center text-center border border-white/10">
+      <div className="w-24 h-24 bg-indigo-500/20 rounded-full flex items-center justify-center mb-8 shadow-[0_0_30px_rgba(79,70,229,0.3)]">
+        <TrophyIcon className="w-12 h-12 text-indigo-400" />
+      </div>
+      <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter">
+        {isSaving ? 'Logging Data' : saveError ? 'Sync Failed' : 'Elite Session Done'}
       </h2>
-      <p className="text-gray-300 mt-2 mb-6">
+      <p className="text-slate-400 mt-4 mb-10 text-base leading-relaxed font-medium">
         {isSaving
-          ? 'Just a moment while we log your hard work.'
+          ? 'Finalizing your training protocols in the secure cloud.'
           : saveError
-          ? `Could not save your workout: ${saveError.message}`
-          : `Great job finishing ${completedWorkout.name}.`}
+          ? `Encryption Error: ${saveError.message}`
+          : `You've mastered ${completedWorkout.name}. Every rep counts towards your silhouette.`}
       </p>
       
-      {isSaving && <div className="my-4"><LoadingSpinner /></div>}
+      {isSaving && <div className="mb-10"><LoadingSpinner size="lg" /></div>}
       
       <button
         onClick={onFinish}
         disabled={isSaving}
-        className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50"
+        className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white font-black py-5 rounded-2xl transition-all shadow-xl shadow-indigo-600/30 active:scale-95 uppercase tracking-[0.2em] italic"
       >
-        {isSaving ? 'Please Wait' : 'Finish & View History'}
+        {isSaving ? 'Synchronizing...' : 'Return to Hub'}
       </button>
     </div>
   );
 };
 
-// --- Main Guided Workout Component ---
 export default function WorkoutLogger({ onWorkoutComplete }: { onWorkoutComplete: () => void; }) {
     const { createWorkout } = useWorkouts();
     const { execute, loading: isSaving, error: saveError } = useAsyncAction();
@@ -90,232 +95,276 @@ export default function WorkoutLogger({ onWorkoutComplete }: { onWorkoutComplete
     const [reps, setReps] = useState('');
     const [validationError, setValidationError] = useState('');
     const [isDetailsVisible, setIsDetailsVisible] = useState(false);
-    const restAudioRef = useRef<HTMLAudioElement | null>(null);
-    
-    useEffect(() => {
-        if (typeof Audio !== 'undefined') {
-            restAudioRef.current = new Audio('data:audio/wav;base64,UklGRjIXAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YRIZAABAgD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/');
-        }
-    }, []);
+    const [showAiAssistant, setShowAiAssistant] = useState(false);
+    const [aiFeedback, setAiFeedback] = useState<string | null>(null);
+    const [aiLoading, setAiLoading] = useState(false);
 
-    const currentWorkoutIndex = selectedWorkoutId ? programState.workouts.findIndex(w => w.id === selectedWorkoutId) : -1;
-    const currentWorkout = currentWorkoutIndex !== -1 ? programState.workouts[currentWorkoutIndex] : null;
-    const currentExercise = currentWorkout ? currentWorkout.exercises[currentExerciseIndex] : null;
+    const activeWorkout = programState.workouts.find(w => w.id === selectedWorkoutId);
+    const currentExercise = activeWorkout?.exercises[currentExerciseIndex];
 
-    const isLastSetOfExercise = currentExercise ? currentSetIndex >= currentExercise.sets - 1 : false;
-    const isLastExerciseOfWorkout = currentWorkout ? currentExerciseIndex >= currentWorkout.exercises.length - 1 : false;
-
-    useEffect(() => {
-        let timer: number | undefined;
-        if (isResting && restTimeLeft > 0) {
-            timer = window.setInterval(() => setRestTimeLeft(prev => prev - 1), 1000);
-        } else if (isResting && restTimeLeft === 0) {
-            setIsResting(false);
-            restAudioRef.current?.play();
-            if (!isLastSetOfExercise) {
-                setCurrentSetIndex(prev => prev + 1);
-            }
-        }
-        return () => clearInterval(timer);
-    }, [isResting, restTimeLeft, isLastSetOfExercise]);
-    
-    const handleSaveWorkout = async (completedWorkout: Workout) => {
-        await execute(async () => {
-            const workoutData = {
-                workout_name: completedWorkout.name,
-                workout_type: 'strength', // Defaulting as this isn't in the static data
-            };
-
-            const exercisesData = completedWorkout.exercises
-                .map((ex, index) => {
-                    const completedSets = ex.loggedSets.filter(s => s.completed);
-                    if (completedSets.length === 0) return null;
-
-                    const totalSets = completedSets.length;
-                    const avgReps = Math.round(completedSets.reduce((sum, s) => sum + (s.reps || 0), 0) / totalSets);
-                    const avgWeight = parseFloat((completedSets.reduce((sum, s) => sum + (s.weight || 0), 0) / totalSets).toFixed(2));
-                    
-                    return {
-                        exercise_name: ex.name,
-                        sets: totalSets,
-                        reps: avgReps,
-                        weight: avgWeight,
-                        order_index: index,
-                    };
-                })
-                .filter((ex): ex is NonNullable<typeof ex> => ex !== null); 
-
-            if (exercisesData.length > 0) {
-                await createWorkout(workoutData, exercisesData);
-            }
+    const getFormAssistantTips = async () => {
+      if (!currentExercise || aiLoading) return;
+      setAiLoading(true);
+      setShowAiAssistant(true);
+      try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const prompt = `
+          As a world-class physique architecture coach, guide a beginner through ${currentExercise.name}.
+          Explain these form cues with elite precision: ${currentExercise.formCues.join(', ')}.
+          Tell them WHY these matters for long-term sculpting. Keep it professional, motivating, and under 90 words.
+        `;
+        const response = await ai.models.generateContent({
+          model: 'gemini-3-flash-preview',
+          contents: prompt,
         });
+        setAiFeedback(response.text);
+      } catch (err) {
+        setAiFeedback("Control the eccentric phase. Mindful tension is the primary architect of muscle symmetry.");
+      } finally {
+        setAiLoading(false);
+      }
     };
 
     const handleLogSet = () => {
-        if (!currentWorkout || !currentExercise || currentWorkoutIndex === -1) return;
-
-        const weightNum = parseFloat(weight);
-        const repsNum = parseInt(reps, 10);
-
-        if (weight.trim() === '' || reps.trim() === '') {
-            setValidationError('Please fill in both weight and reps.');
-            return;
-        }
-        if (isNaN(weightNum) || weightNum < 0) {
-            setValidationError('Weight must be 0 or greater.');
-            return;
-        }
-        if (isNaN(repsNum) || repsNum <= 0) {
-            setValidationError('Reps must be a positive number.');
+        if (!weight || !reps || isNaN(Number(weight)) || isNaN(Number(reps))) {
+            setValidationError('Numeric values required for logging.');
             return;
         }
         setValidationError('');
 
-        const newProgramState = JSON.parse(JSON.stringify(programState));
-        const exercise = newProgramState.workouts[currentWorkoutIndex].exercises[currentExerciseIndex];
-        exercise.loggedSets[currentSetIndex] = { weight: weightNum, reps: repsNum, completed: true };
-        setProgramState(newProgramState);
-
-        const restDuration = exercise.rest;
-        setRestTimeLeft(restDuration);
-        setIsResting(true);
-        setWeight('');
-        setReps('');
-    };
-    
-    const handleNextExercise = () => {
-        if (isLastExerciseOfWorkout) {
-            if (currentWorkout) {
-                handleSaveWorkout(currentWorkout);
+        const updatedProgram = { ...programState };
+        const workout = updatedProgram.workouts.find(w => w.id === selectedWorkoutId);
+        if (workout && currentExercise) {
+            const exercise = workout.exercises[currentExerciseIndex];
+            exercise.loggedSets[currentSetIndex] = {
+                weight: Number(weight),
+                reps: Number(reps),
+                completed: true
+            };
+            setProgramState(updatedProgram);
+            
+            if (currentSetIndex < currentExercise.sets - 1) {
+                setIsResting(true);
+                setRestTimeLeft(currentExercise.rest);
+            } else {
+                handleNextExercise();
             }
-            setIsWorkoutComplete(true);
-        } else {
-            setCurrentExerciseIndex(prev => prev + 1);
-            setCurrentSetIndex(0);
-            setIsDetailsVisible(false);
         }
     };
 
-    const handleFinish = () => {
-        // Reset local state for next workout
-        setProgramState(JSON.parse(JSON.stringify(beginnerProgram)));
-        setSelectedWorkoutId(null);
-        setCurrentExerciseIndex(0);
-        setCurrentSetIndex(0);
-        setIsWorkoutComplete(false);
-        // Navigate to history tab
-        onWorkoutComplete();
+    const handleNextExercise = () => {
+        if (activeWorkout && currentExerciseIndex < activeWorkout.exercises.length - 1) {
+            setCurrentExerciseIndex(currentExerciseIndex + 1);
+            setCurrentSetIndex(0);
+            setIsResting(false);
+            setWeight('');
+            setReps('');
+            setAiFeedback(null);
+        } else {
+            handleCompleteWorkout();
+        }
     };
+
+    const handleCompleteWorkout = async () => {
+        if (!activeWorkout) return;
+        
+        await execute(async () => {
+            const exerciseData = activeWorkout.exercises.map((ex, idx) => ({
+                exercise_name: ex.name,
+                sets: ex.sets,
+                reps: parseInt(ex.loggedSets[0]?.reps?.toString() || '0'),
+                weight: parseFloat(ex.loggedSets[0]?.weight?.toString() || '0'),
+                order_index: idx
+            }));
+
+            await createWorkout({
+                workout_name: activeWorkout.name,
+                workout_type: 'strength',
+                completed_at: new Date().toISOString(),
+                duration_minutes: 45,
+                calories_burned: 300,
+                notes: 'SculptAI Guided Session'
+            }, exerciseData as any);
+
+            setIsWorkoutComplete(true);
+        });
+    };
+
+    if (isWorkoutComplete && activeWorkout) {
+        return <WorkoutCompleteScreen 
+                    completedWorkout={activeWorkout} 
+                    onFinish={onWorkoutComplete} 
+                    isSaving={isSaving} 
+                    saveError={saveError} 
+                />;
+    }
 
     if (!selectedWorkoutId) {
         return <WorkoutSelection program={programState} onSelectWorkout={setSelectedWorkoutId} />;
     }
 
-    if (isWorkoutComplete) {
-        return <WorkoutCompleteScreen 
-            completedWorkout={currentWorkout!} 
-            onFinish={handleFinish}
-            isSaving={isSaving}
-            saveError={saveError}
-        />;
-    }
-    
-    if (!currentWorkout || !currentExercise) {
-        return <div className="text-center p-8">An unexpected error occurred. Please refresh.</div>;
-    }
-    
+    if (!currentExercise) return null;
+
     return (
-        <div className="w-full max-w-md mx-auto bg-gray-800 rounded-xl shadow-2xl overflow-hidden animate-fade-in-up relative">
-            <div className="relative">
-                <video
-                    key={currentExercise.id}
-                    className="w-full h-48 object-cover"
-                    src={currentExercise.videoUrl}
-                    autoPlay loop muted playsInline
-                    aria-label={`${currentExercise.name} video demonstration`}
-                />
-                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-gray-800 to-transparent"></div>
-                <div className="absolute bottom-4 left-4 text-white">
-                    <p className="text-sm uppercase tracking-wider text-indigo-400 font-semibold">{`Exercise ${currentExerciseIndex + 1} / ${currentWorkout.exercises.length}`}</p>
-                    <h2 className="text-2xl font-bold">{currentExercise.name}</h2>
+        <div className="max-w-5xl mx-auto flex flex-col gap-8">
+            <div className="bg-[#0f172a] rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/10 flex flex-col md:flex-row min-h-[500px]">
+                <div className="md:w-1/2 relative bg-black group">
+                    <video 
+                        src={currentExercise.videoUrl} 
+                        className="w-full h-full object-cover aspect-video md:aspect-auto" 
+                        autoPlay 
+                        loop 
+                        muted 
+                        playsInline 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+                    <div className="absolute top-6 left-6 flex items-center gap-3">
+                        <span className="bg-indigo-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg tracking-widest shadow-xl italic">PRO DEMO</span>
+                        <span className="bg-white/10 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1.5 rounded-lg tracking-widest uppercase border border-white/10">4K FEED</span>
+                    </div>
+                </div>
+
+                <div className="md:w-1/2 p-8 md:p-12 flex flex-col bg-white/[0.02]">
+                    <div className="flex justify-between items-start mb-8">
+                        <div>
+                            <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter leading-none">{currentExercise.name}</h2>
+                            <p className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] mt-3">MOVEMENT {currentExerciseIndex + 1} OF {activeWorkout.exercises.length}</p>
+                        </div>
+                        <button 
+                            onClick={getFormAssistantTips}
+                            className="p-3 bg-indigo-500 text-white rounded-2xl shadow-xl shadow-indigo-600/20 hover:scale-110 transition-all border border-indigo-400/30"
+                            title="AI Assistant"
+                        >
+                            <SparklesIcon className="w-6 h-6" />
+                        </button>
+                    </div>
+
+                    <div className="flex gap-4 mb-8">
+                        <div className="flex-1 bg-white/5 p-5 rounded-3xl border border-white/5 text-center">
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Set Index</p>
+                            <p className="text-3xl font-black text-white italic">{currentSetIndex + 1}<span className="text-sm text-slate-500 not-italic ml-1">/{currentExercise.sets}</span></p>
+                        </div>
+                        <div className="flex-1 bg-white/5 p-5 rounded-3xl border border-white/5 text-center">
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Target</p>
+                            <p className="text-3xl font-black text-white italic">{currentExercise.reps}</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Intensity (LBS)</label>
+                                <input 
+                                    type="number" 
+                                    value={weight} 
+                                    onChange={(e) => setWeight(e.target.value)} 
+                                    className="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-4 text-white font-black text-xl italic focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-800"
+                                    placeholder="00"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Rep Count</label>
+                                <input 
+                                    type="number" 
+                                    value={reps} 
+                                    onChange={(e) => setReps(e.target.value)} 
+                                    className="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-4 text-white font-black text-xl italic focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-800"
+                                    placeholder="00"
+                                />
+                            </div>
+                        </div>
+
+                        {validationError && <p className="text-red-400 text-[10px] font-black uppercase text-center tracking-widest">{validationError}</p>}
+
+                        <button 
+                            onClick={handleLogSet}
+                            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] italic transition-all shadow-xl shadow-indigo-600/30 active:scale-[0.98]"
+                        >
+                            Finalize Set
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div className="p-4 md:p-6">
-                 <div className="grid grid-cols-3 gap-4 text-center mb-6">
-                    <div>
-                        <p className="text-gray-400 text-sm">Sets</p>
-                        <p className="text-white font-bold text-lg">{currentExercise.sets}</p>
-                    </div>
-                    <div>
-                        <p className="text-gray-400 text-sm">Reps</p>
-                        <p className="text-white font-bold text-lg">{currentExercise.reps}</p>
-                    </div>
-                    <div>
-                        <p className="text-gray-400 text-sm">Rest</p>
-                        <p className="text-white font-bold text-lg">{currentExercise.rest}s</p>
-                    </div>
-                </div>
-
-                <div className="space-y-2 mb-4">
-                    {currentExercise.loggedSets.map((set, index) => (
-                        <div key={index} className={`flex justify-between items-center p-3 rounded-lg transition-colors duration-200 ${currentSetIndex === index && !isResting ? 'bg-gray-700' : 'bg-transparent'}`}>
-                            <div className="flex items-center space-x-3">
-                                {set.completed ? (
-                                    <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0" aria-label="Set completed"><CheckIcon className="w-4 h-4 text-white" /></div>
-                                ) : (
-                                    <div className={`w-6 h-6 rounded-full border-2 ${currentSetIndex === index ? 'border-indigo-400' : 'border-gray-600'} flex items-center justify-center flex-shrink-0`} aria-label={`Set ${index + 1}`}>
-                                        <span className={`text-xs font-bold ${currentSetIndex === index ? 'text-indigo-400' : 'text-gray-500'}`}>{index + 1}</span>
-                                    </div>
-                                )}
-                                <p className={`font-semibold ${set.completed ? 'text-gray-500 line-through' : 'text-white'}`}>Target: {currentExercise.reps} reps</p>
-                            </div>
-                            {set.completed && <p className="text-sm text-gray-300">{set.weight}lbs &times; {set.reps} reps</p>}
-                        </div>
-                    ))}
-                </div>
-
-                <div className="bg-gray-700/50 p-4 rounded-lg mb-4">
-                     <h3 className="font-semibold text-white mb-2">Log Set {currentSetIndex + 1}</h3>
-                    <div className="flex space-x-2">
-                        <input type="number" placeholder="Weight (lbs)" value={weight} onChange={(e) => setWeight(e.target.value)} className="w-1/2 p-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" aria-label="Weight input" disabled={isResting} />
-                        <input type="number" placeholder="Reps" value={reps} onChange={(e) => setReps(e.target.value)} className="w-1/2 p-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" aria-label="Reps input" disabled={isResting} />
-                    </div>
-                     {validationError && <p className="text-red-400 text-xs mt-2">{validationError}</p>}
-                </div>
-
-                <button onClick={handleLogSet} disabled={isResting} className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center justify-center">
-                    <CheckIcon className="w-5 h-5 mr-2" /> Log Set
-                </button>
-
-                <div className="border-b border-gray-700 mt-4">
-                    <button onClick={() => setIsDetailsVisible(!isDetailsVisible)} className="w-full flex justify-between items-center py-3 text-left text-gray-300 hover:text-white transition-colors" aria-expanded={isDetailsVisible}>
-                        <div className="flex items-center"><InfoIcon className="w-5 h-5 mr-3 text-gray-500" /><span className="font-semibold">View Form Cues & Details</span></div>
-                        <ChevronDownIcon className={`w-5 h-5 transition-transform duration-300 ${isDetailsVisible ? 'rotate-180' : ''}`} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="md:col-span-2 bg-white/[0.03] border border-white/10 rounded-[2rem] p-8 shadow-xl">
+                    <button 
+                        onClick={() => setIsDetailsVisible(!isDetailsVisible)}
+                        className="w-full flex justify-between items-center text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400"
+                    >
+                        Elite Form Protocols
+                        <ChevronDownIcon className={`w-5 h-5 transition-transform ${isDetailsVisible ? 'rotate-180' : ''}`} />
                     </button>
                     {isDetailsVisible && (
-                        <div className="pt-2 pb-4 px-4 animate-fade-in">
-                            <h4 className="font-semibold text-indigo-400 mb-2">Key Form Cues</h4>
-                            <ul className="space-y-2 list-disc list-inside text-gray-400 text-sm pl-2">{currentExercise.formCues.map((cue, index) => <li key={index}>{cue}</li>)}</ul>
+                        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-in">
+                            {currentExercise.formCues.map((cue, idx) => (
+                                <div key={idx} className="flex gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 items-start">
+                                    <div className="w-5 h-5 bg-indigo-600 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-black">{idx + 1}</div>
+                                    <p className="text-sm text-slate-300 font-medium leading-tight">{cue}</p>
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>
 
-                {isLastSetOfExercise && currentExercise.loggedSets[currentSetIndex].completed && (
-                    <button onClick={handleNextExercise} className="w-full mt-4 bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out flex items-center justify-center animate-fade-in">
-                        {isLastExerciseOfWorkout ? 'Finish Workout' : 'Next Exercise'}
-                        <ChevronRightIcon className="w-5 h-5 ml-2" />
-                    </button>
-                )}
-            </div>
-            
-            {isResting && (
-                <div className="absolute inset-0 bg-gray-900 bg-opacity-95 flex flex-col items-center justify-center animate-fade-in z-10">
-                    <p className="text-2xl text-gray-400 mb-2">Rest</p>
-                    <p className="text-7xl font-bold text-white mb-6 tabular-nums">{restTimeLeft}</p>
-                    <p className="text-gray-300 mb-6 text-center px-4">Next up: <span className="font-bold text-white">{isLastSetOfExercise ? currentWorkout.exercises[currentExerciseIndex + 1]?.name || 'Workout Complete' : `${currentExercise.name} - Set ${currentSetIndex + 2}`}</span></p>
-                    <button onClick={() => { setIsResting(false); if (!isLastSetOfExercise) { setCurrentSetIndex(prev => prev + 1); }}} className="text-indigo-400 hover:text-indigo-300 font-semibold">Skip Rest</button>
+                <div className="bg-white/[0.03] border border-white/10 rounded-[2rem] p-8 flex flex-col justify-center items-center text-center shadow-xl relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-indigo-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3">Recover Window</p>
+                    <div className={`text-6xl font-black tabular-nums italic ${isResting ? 'text-indigo-400 shadow-indigo-500/20 drop-shadow-xl' : 'text-white/20'}`}>
+                        {isResting ? restTimeLeft : '--'}
+                    </div>
+                    {isResting && (
+                        <button 
+                            onClick={() => setIsResting(false)} 
+                            className="mt-6 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-white transition-colors border-b border-white/10 pb-1"
+                        >
+                            Skip Recovery
+                        </button>
+                    )}
                 </div>
+            </div>
+
+            {showAiAssistant && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+                <div className="bg-[#1e293b] border border-indigo-500/30 rounded-[2.5rem] max-w-xl w-full p-10 shadow-2xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/5 blur-3xl -z-0" />
+                  
+                  <div className="flex justify-between items-center mb-8 relative z-10">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-indigo-600 rounded-2xl shadow-xl">
+                        <SparklesIcon className="w-6 h-6 text-white" />
+                      </div>
+                      <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">AI Form Assistant</h3>
+                    </div>
+                    <button onClick={() => setShowAiAssistant(false)} className="text-slate-500 hover:text-white transition-colors p-2">
+                      <span className="material-symbols-outlined text-3xl">close</span>
+                    </button>
+                  </div>
+                  
+                  <div className="min-h-[160px] flex items-center justify-center relative z-10">
+                    {aiLoading ? (
+                      <LoadingSpinner size="lg" />
+                    ) : (
+                      <div className="space-y-6">
+                        <p className="text-white text-xl md:text-2xl font-bold leading-relaxed italic tracking-tight text-center md:text-left">
+                          "{aiFeedback}"
+                        </p>
+                        <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+                          <span className="bg-indigo-500/20 text-indigo-300 text-[10px] font-black uppercase px-3 py-1.5 rounded-lg border border-indigo-500/20">Hypertrophy Goal</span>
+                          <span className="bg-cyan-500/20 text-cyan-300 text-[10px] font-black uppercase px-3 py-1.5 rounded-lg border border-cyan-500/20">Optimal Symmetry</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <button 
+                    onClick={() => setShowAiAssistant(false)}
+                    className="w-full mt-10 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] italic transition-all relative z-10 shadow-xl shadow-indigo-600/30"
+                  >
+                    Resuming Session
+                  </button>
+                </div>
+              </div>
             )}
         </div>
     );

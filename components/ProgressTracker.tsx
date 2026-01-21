@@ -5,6 +5,7 @@ import { useAsyncAction } from '../lib/hooks/useAsyncAction'
 import { ErrorMessage } from './ui/ErrorMessage'
 import { LoadingSpinner } from './ui/LoadingSpinner'
 import { progressLogSchema } from '../lib/validations'
+import { PhysiqueAnalyzer } from './ai/PhysiqueAnalyzer'
 import { 
   LineChart, 
   Line, 
@@ -62,12 +63,6 @@ export default function ProgressTracker() {
     if (chartData.length === 0) return null;
     return chartData[chartData.length - 1];
   }, [chartData]);
-
-  const idealShoulderTarget = useMemo(() => {
-    const waistNum = parseFloat(formData.waist);
-    if (isNaN(waistNum)) return null;
-    return (waistNum * IDEAL_RATIO).toFixed(1);
-  }, [formData.waist]);
 
   const handleUnitToggle = (newUnit: 'cm' | 'in') => {
     if (newUnit === unit) return;
@@ -140,13 +135,8 @@ export default function ProgressTracker() {
     })
   }
 
-  const displayVal = (cm: number | null | undefined) => {
-    if (cm === null || cm === undefined) return '--';
-    return unit === 'in' ? cmToIn(cm) : cm;
-  };
-
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-6xl mx-auto space-y-12">
       {logsLoading ? (
         <div className="flex justify-center p-8">
           <LoadingSpinner />
@@ -155,8 +145,8 @@ export default function ProgressTracker() {
         <>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h2 className="text-3xl font-black text-white tracking-tight uppercase italic">Ratio Analytics</h2>
-              <p className="text-slate-400">Achieving the 1.50 competitive standard.</p>
+              <h2 className="text-3xl font-black text-white tracking-tight uppercase italic">Sculpt Analytics</h2>
+              <p className="text-slate-400">Precision tracking for your symmetry journey.</p>
             </div>
             <button
               onClick={() => setShowForm(!showForm)}
@@ -170,8 +160,8 @@ export default function ProgressTracker() {
             <div className="lg:col-span-3 bg-slate-800/40 border border-slate-700 rounded-3xl p-6 shadow-2xl backdrop-blur-sm">
               <div className="flex justify-between items-center mb-8">
                 <div>
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Ratio Trajectory</p>
-                  <h3 className="text-xl font-black text-white italic uppercase">Historical V-Taper</h3>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">V-Taper Index</p>
+                  <h3 className="text-xl font-black text-white italic uppercase">Proportionality Trend</h3>
                 </div>
                 <div className="flex gap-2 bg-slate-900/80 p-1 rounded-xl border border-slate-700">
                    <button onClick={() => handleUnitToggle('in')} className={`px-3 py-1 text-[10px] font-black uppercase rounded-lg transition-all ${unit === 'in' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>IN</button>
@@ -196,13 +186,13 @@ export default function ProgressTracker() {
                         contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '16px' }}
                         itemStyle={{ color: '#818cf8', fontWeight: 'bold', fontSize: '12px' }}
                       />
-                      <ReferenceLine y={IDEAL_RATIO} stroke="#fbbf24" strokeDasharray="8 8" />
+                      <ReferenceLine y={IDEAL_RATIO} stroke="#fbbf24" strokeDasharray="8 8" label={{ position: 'right', value: '1.50 TARGET', fill: '#fbbf24', fontSize: 8, fontWeight: 900 }} />
                       <Area type="monotone" dataKey="ratio" stroke="#6366f1" strokeWidth={4} fillOpacity={1} fill="url(#colorRatio)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-slate-500 bg-slate-900/30 rounded-3xl border border-dashed border-slate-700/50">
-                    <p className="font-bold uppercase tracking-widest text-xs">Awaiting competition data...</p>
+                    <p className="font-bold uppercase tracking-widest text-xs">Waiting for data...</p>
                   </div>
                 )}
               </div>
@@ -210,31 +200,94 @@ export default function ProgressTracker() {
 
             <div className="space-y-6">
                <div className="bg-indigo-600/10 border border-indigo-500/30 rounded-3xl p-6 shadow-xl">
-                  <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4">Metric Focus</h4>
+                  <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4">Latest Scan</h4>
                   <div className="space-y-4">
                     <div>
+                       <p className="text-xs text-slate-400 font-bold uppercase mb-1">Symmetry Ratio</p>
+                       <p className="text-4xl font-black text-white">{latestStats?.ratio || '--'}</p>
+                    </div>
+                    <div>
                        <p className="text-xs text-slate-400 font-bold uppercase mb-1">Shoulders</p>
-                       <p className="text-2xl font-black text-white">{latestStats?.shoulders || '--'} <span className="text-xs text-slate-500">{unit}</span></p>
+                       <p className="text-xl font-black text-white">{latestStats?.shoulders || '--'} <span className="text-[10px] text-slate-500">{unit}</span></p>
+                    </div>
+                    <div>
+                       <p className="text-xs text-slate-400 font-bold uppercase mb-1">Waist</p>
+                       <p className="text-xl font-black text-white">{latestStats?.waist || '--'} <span className="text-[10px] text-slate-500">{unit}</span></p>
                     </div>
                   </div>
                </div>
             </div>
           </div>
 
-          {showForm && (
-            <div className="bg-slate-800 rounded-3xl shadow-2xl p-8 mb-6 border border-slate-700 animate-fade-in ring-2 ring-indigo-500/20">
-              <div className="flex justify-between items-center mb-8">
-                <h3 className="text-2xl font-black text-white uppercase italic tracking-tight">Entry Verification</h3>
-                <button onClick={() => setShowForm(false)} className="text-slate-500 hover:text-white transition-colors text-3xl leading-none">&times;</button>
-              </div>
-              
-              {error && <ErrorMessage error={error} onDismiss={clearError} />}
+          <section className="space-y-6">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">📸</span>
+              <h3 className="text-2xl font-black text-white uppercase italic tracking-tight">AI Physique Analysis</h3>
+            </div>
+            <PhysiqueAnalyzer />
+          </section>
 
-              <form onSubmit={handleSubmit} className="space-y-8">
-                <button type="submit" disabled={loading} className="w-full bg-indigo-600 text-white py-5 px-8 rounded-2xl hover:bg-indigo-500 disabled:opacity-50 font-black text-xl uppercase italic tracking-widest transition-all">
-                  {loading ? <LoadingSpinner size="sm" /> : <>Finalize Entry 🔥</>}
+          {showForm && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+              <div className="bg-slate-900 border border-indigo-500/30 rounded-3xl max-w-lg w-full p-8 shadow-2xl relative">
+                <button onClick={() => setShowForm(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors">
+                  <span className="material-symbols-outlined">close</span>
                 </button>
-              </form>
+                
+                <h3 className="text-2xl font-black text-white uppercase italic tracking-tight mb-8">New Log Entry</h3>
+                
+                {error && <ErrorMessage error={error} onDismiss={clearError} />}
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 ml-1">Shoulders ({unit})</label>
+                      <input 
+                        type="number" step="0.1"
+                        value={formData.shoulders} 
+                        onChange={(e) => setFormData(p => ({...p, shoulders: e.target.value}))} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                      {formValidationErrors.shoulders && <p className="text-red-400 text-[10px] mt-1">{formValidationErrors.shoulders}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 ml-1">Waist ({unit})</label>
+                      <input 
+                        type="number" step="0.1"
+                        value={formData.waist} 
+                        onChange={(e) => setFormData(p => ({...p, waist: e.target.value}))} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                      {formValidationErrors.waist && <p className="text-red-400 text-[10px] mt-1">{formValidationErrors.waist}</p>}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 ml-1">Weight (lbs)</label>
+                      <input 
+                        type="number" step="0.1"
+                        value={formData.weight} 
+                        onChange={(e) => setFormData(p => ({...p, weight: e.target.value}))} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 ml-1">Body Fat %</label>
+                      <input 
+                        type="number" step="0.1"
+                        value={formData.body_fat_percentage} 
+                        onChange={(e) => setFormData(p => ({...p, body_fat_percentage: e.target.value}))} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <button type="submit" disabled={loading} className="w-full bg-indigo-600 text-white py-5 px-8 rounded-2xl hover:bg-indigo-500 disabled:opacity-50 font-black uppercase italic tracking-widest transition-all">
+                    {loading ? <LoadingSpinner size="sm" /> : <>Finalize Entry</>}
+                  </button>
+                </form>
+              </div>
             </div>
           )}
         </>

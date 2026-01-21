@@ -1,10 +1,38 @@
-// This hook is now deprecated as data is fetched via Next.js API routes in the components.
-// It can be removed or kept for potential future client-side-only data fetching.
-// For now, it serves as a placeholder.
+
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../supabaseClient';
+import type { CoachWithListings } from '../types';
 
 export function useCoaches() {
-    // Logic would go here if we were fetching directly from the client
-    // e.g., using Supabase client-side library.
-    // Since we're using API routes, this hook is not actively used by the CoachMarketplace component.
-    return { coaches: [], loading: false, error: null };
+  const [coaches, setCoaches] = useState<CoachWithListings[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchCoaches = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('coaches')
+        .select(`
+          *,
+          coach_listings (*)
+        `)
+        .eq('is_verified', true);
+
+      if (fetchError) throw fetchError;
+      setCoaches(data as unknown as CoachWithListings[] || []);
+    } catch (err) {
+      console.error('Error fetching coaches:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch coaches'));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCoaches();
+  }, [fetchCoaches]);
+
+  return { coaches, loading, error, refresh: fetchCoaches };
 }
