@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from './AuthProvider';
 import { supabase } from '../lib/supabaseClient';
 import { useAsyncAction } from '../lib/hooks/useAsyncAction';
@@ -7,7 +7,7 @@ import { LoadingSpinner } from './ui/LoadingSpinner';
 import { SparklesIcon } from './icons';
 import { generateTrainingProgram } from '../lib/ai/program-generator';
 import { GoalCard } from './onboarding/GoalCard';
-import { measurementSchema, type MeasurementFormData } from '../lib/validations';
+import { measurementSchema } from '../lib/validations';
 
 interface OnboardingWizardProps {
   onComplete: () => void;
@@ -94,9 +94,17 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
     activity: 'moderate' as any,
   });
 
+  const [photos, setPhotos] = useState<File[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const activeGoal = goals.find(g => g.id === selectedGoalId);
+
+  const currentRatio = useMemo(() => {
+    const s = parseFloat(measurements.shoulders);
+    const w = parseFloat(measurements.waist);
+    if (s > 0 && w > 0) return (s / w).toFixed(2);
+    return '0.00';
+  }, [measurements.shoulders, measurements.waist]);
 
   const validateStep = () => {
     const newErrors: Record<string, string> = {};
@@ -109,7 +117,6 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
       if (!bioData.age) newErrors.age = 'Required';
       if (!bioData.height) newErrors.height = 'Required';
       if (!measurements.weight) newErrors.weight = 'Required';
-    } else if (currentStep === 2) {
       if (!measurements.shoulders) newErrors.shoulders = 'Required';
       if (!measurements.waist) newErrors.waist = 'Required';
     }
@@ -127,8 +134,6 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
     setIsGenerating(true);
     
     const success = await execute(async () => {
-      const currentRatio = (parseFloat(measurements.shoulders) / parseFloat(measurements.waist)).toFixed(2);
-
       const aiData = {
         goal: selectedGoalId,
         currentRatio,
@@ -184,7 +189,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
     if (!success) setIsGenerating(false);
   };
 
-  const progressSteps = ['Objectives', 'Basics', 'Metrics', 'Synthesis'];
+  const progressSteps = ['Objectives', 'Metrics', 'Synthesis'];
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0f172a] p-4 sm:p-6 overflow-y-auto">
@@ -249,146 +254,160 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
           </div>
         )}
 
-        {/* Step 1: Biological Basics */}
+        {/* Step 1: Body Metrics */}
         {currentStep === 1 && (
           <div className="animate-fade-in space-y-8">
             <div className="text-center">
-              <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter mb-2">Biological Basics</h2>
-              <p className="text-slate-400 font-medium">Your physiological foundation for AI calibration.</p>
+              <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter mb-2">Architectural Scan</h2>
+              <p className="text-slate-400 font-medium leading-relaxed max-w-xl mx-auto">Precision metrics are mandatory for calibrated coaching.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Identity & Age</label>
-                <input
-                  placeholder="Full Name"
-                  value={bioData.fullName}
-                  onChange={(e) => setBioData({...bioData, fullName: e.target.value})}
-                  className="w-full bg-slate-900 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold italic focus:ring-1 focus:ring-indigo-500 outline-none"
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <input
-                    type="number" placeholder="Age"
-                    value={bioData.age}
-                    onChange={(e) => setBioData({...bioData, age: e.target.value})}
-                    className="w-full bg-slate-900 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold italic focus:ring-1 focus:ring-indigo-500 outline-none"
-                  />
-                  <select
-                    value={bioData.gender}
-                    onChange={(e) => setBioData({...bioData, gender: e.target.value as any})}
-                    className="w-full bg-slate-900 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold italic outline-none"
-                  >
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              <div className="space-y-6">
+                <div className="bg-white/5 p-8 rounded-[2rem] border border-white/10">
+                  <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6 italic">Biological Baseline</h3>
+                  <div className="space-y-4">
+                    <input
+                      placeholder="FULL NAME"
+                      value={bioData.fullName}
+                      onChange={(e) => setBioData({...bioData, fullName: e.target.value})}
+                      className="w-full bg-slate-900 border border-white/10 rounded-2xl px-6 py-4 text-white font-black italic tracking-tight focus:ring-1 focus:ring-indigo-500 outline-none"
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <input
+                        type="number" placeholder="AGE"
+                        value={bioData.age}
+                        onChange={(e) => setBioData({...bioData, age: e.target.value})}
+                        className="w-full bg-slate-900 border border-white/10 rounded-2xl px-6 py-4 text-white font-black italic tracking-tight focus:ring-1 focus:ring-indigo-500 outline-none"
+                      />
+                      <select
+                        value={bioData.gender}
+                        onChange={(e) => setBioData({...bioData, gender: e.target.value as any})}
+                        className="w-full bg-slate-900 border border-white/10 rounded-2xl px-6 py-4 text-white font-black italic tracking-tight outline-none"
+                      >
+                        <option value="male">MALE</option>
+                        <option value="female">FEMALE</option>
+                        <option value="other">OTHER</option>
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <input
+                        type="number" placeholder="HEIGHT (IN)"
+                        value={bioData.height}
+                        onChange={(e) => setBioData({...bioData, height: e.target.value})}
+                        className="w-full bg-slate-900 border border-white/10 rounded-2xl px-6 py-4 text-white font-black italic tracking-tight focus:ring-1 focus:ring-indigo-500 outline-none"
+                      />
+                      <input
+                        type="number" placeholder="WEIGHT (LBS)"
+                        value={measurements.weight}
+                        onChange={(e) => setMeasurements({...measurements, weight: e.target.value})}
+                        className="w-full bg-slate-900 border border-white/10 rounded-2xl px-6 py-4 text-white font-black italic tracking-tight focus:ring-1 focus:ring-indigo-500 outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white/5 p-8 rounded-[2rem] border border-white/10">
+                  <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6 italic">Training Context</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <select
+                      value={background.experience}
+                      onChange={(e) => setBackground({...background, experience: e.target.value as any})}
+                      className="w-full bg-slate-900 border border-white/10 rounded-2xl px-6 py-4 text-white font-black italic tracking-tight outline-none"
+                    >
+                      {trainingExperiences.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
+                    </select>
+                    <select
+                      value={background.activity}
+                      onChange={(e) => setBackground({...background, activity: e.target.value as any})}
+                      className="w-full bg-slate-900 border border-white/10 rounded-2xl px-6 py-4 text-white font-black italic tracking-tight outline-none"
+                    >
+                      {activityLevels.map(lvl => <option key={lvl.id} value={lvl.id}>{lvl.label}</option>)}
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Frame Dimensions</label>
-                <div className="grid grid-cols-2 gap-4">
-                  <input
-                    type="number" placeholder="Height (in)"
-                    value={bioData.height}
-                    onChange={(e) => setBioData({...bioData, height: e.target.value})}
-                    className="w-full bg-slate-900 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold italic focus:ring-1 focus:ring-indigo-500 outline-none"
-                  />
-                  <input
-                    type="number" placeholder="Weight (lbs)"
-                    value={measurements.weight}
-                    onChange={(e) => setMeasurements({...measurements, weight: e.target.value})}
-                    className="w-full bg-slate-900 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold italic focus:ring-1 focus:ring-indigo-500 outline-none"
-                  />
+              <div className="space-y-6">
+                <div className="bg-white/5 p-8 rounded-[2rem] border border-white/10">
+                  <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6 italic">Symmetry Metrics (IN)</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { id: 'shoulders', label: 'SHOULDERS*' },
+                      { id: 'waist', label: 'WAIST*' },
+                      { id: 'chest', label: 'CHEST' },
+                      { id: 'arms', label: 'ARMS' },
+                    ].map(f => (
+                      <div key={f.id}>
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1 block ml-1">{f.label}</label>
+                        <input
+                          type="number" step="0.1" placeholder="0.0"
+                          value={(measurements as any)[f.id]}
+                          onChange={(e) => setMeasurements({...measurements, [f.id]: e.target.value})}
+                          className="w-full bg-slate-900 border border-white/10 rounded-2xl px-4 py-3 text-white font-black italic focus:ring-1 focus:ring-indigo-500 outline-none"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-8 p-6 bg-indigo-600/10 border border-indigo-500/30 rounded-3xl text-center relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-500/10 blur-xl" />
+                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Current V-Taper Index</p>
+                    <p className="text-4xl font-black text-white italic tracking-tighter">{currentRatio}:1</p>
+                    {parseFloat(currentRatio) > 0 && parseFloat(currentRatio) < 1.4 && (
+                      <p className="text-[10px] font-bold text-amber-400 mt-2 uppercase tracking-widest">
+                        Focus needed on shoulder width and waist density reduction.
+                      </p>
+                    )}
+                    {parseFloat(currentRatio) >= 1.5 && (
+                      <p className="text-[10px] font-bold text-emerald-400 mt-2 uppercase tracking-widest">
+                        Elite Symmetry Detected. Maintaining Trajectory.
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-                   <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1">Training Level</p>
-                   <select
-                    value={background.experience}
-                    onChange={(e) => setBackground({...background, experience: e.target.value as any})}
-                    className="w-full bg-transparent text-white font-bold italic outline-none"
-                  >
-                    {trainingExperiences.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
-                  </select>
+
+                <div className="bg-white/5 p-8 rounded-[2rem] border border-white/10">
+                  <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6 italic">Progress Photos (Optional)</h3>
+                  <div className="border-2 border-dashed border-white/5 rounded-[2rem] p-8 text-center group hover:border-indigo-500/30 transition-all cursor-pointer">
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="hidden"
+                      id="photo-upload"
+                      onChange={(e) => setPhotos(Array.from(e.target.files || []))}
+                    />
+                    <label htmlFor="photo-upload" className="cursor-pointer">
+                      <span className="material-symbols-outlined text-4xl text-slate-600 mb-2 group-hover:text-indigo-400 transition-colors">cloud_upload</span>
+                      <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Tap to upload skeletal scans</p>
+                      {photos.length > 0 && <p className="text-[10px] text-indigo-400 mt-2 font-black">{photos.length} SCANS SELECTED</p>}
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Step 2: Structural Analysis */}
+        {/* Step 2: Deployment */}
         {currentStep === 2 && (
-          <div className="animate-fade-in space-y-8">
-            <div className="text-center">
-              <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter mb-2">Structural Analysis</h2>
-              <p className="text-slate-400 font-medium">Precision measurements for V-Taper tracking (Inches).</p>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-              {[
-                { id: 'shoulders', label: 'Shoulders*', required: true },
-                { id: 'waist', label: 'Waist*', required: true },
-                { id: 'chest', label: 'Chest' },
-                { id: 'arms', label: 'Arms' },
-                { id: 'bodyFat', label: 'Body Fat %' }
-              ].map(f => (
-                <div key={f.id}>
-                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1 block ml-1">{f.label}</label>
-                  <input
-                    type="number" step="0.1" placeholder="0.0"
-                    value={(measurements as any)[f.id]}
-                    onChange={(e) => setMeasurements({...measurements, [f.id]: e.target.value})}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white font-black italic focus:ring-1 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-              ))}
-              <div className="flex flex-col justify-end">
-                <div className="bg-indigo-600/20 border border-indigo-500/30 rounded-xl p-3 text-center">
-                  <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Current Ratio</p>
-                  <p className="text-2xl font-black text-white italic">
-                    {measurements.shoulders && measurements.waist ? (parseFloat(measurements.shoulders)/parseFloat(measurements.waist)).toFixed(2) : '--'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 block">Activity Level</label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {activityLevels.map(lvl => (
-                  <button
-                    key={lvl.id}
-                    onClick={() => setBackground({...background, activity: lvl.id})}
-                    className={`py-3 rounded-xl text-[10px] font-black uppercase italic transition-all border ${
-                      background.activity === lvl.id ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-slate-800 border-white/5 text-slate-500'
-                    }`}
-                  >
-                    {lvl.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Synthesis */}
-        {currentStep === 3 && (
-          <div className="animate-fade-in space-y-10 text-center py-6">
+          <div className="animate-fade-in space-y-10 text-center py-10">
             <div className="w-24 h-24 bg-indigo-600 rounded-full flex items-center justify-center mx-auto shadow-2xl shadow-indigo-600/50">
               <SparklesIcon className="w-12 h-12 text-white" />
             </div>
-            <div>
-              <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter mb-4">Architecture Ready</h2>
+            <div className="space-y-4">
+              <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter">Protocol Deployment</h2>
               <p className="text-slate-400 font-medium leading-relaxed max-w-sm mx-auto">
-                Protocol synthesized for a <span className="text-indigo-400 font-bold">{selectedTimeline}-week</span> journey targeting a <span className="text-indigo-400 font-bold">{activeGoal?.targetRatio}:1</span> symmetry index.
+                Our architecture engine is synthesizing your elite <span className="text-indigo-400 font-bold">{selectedTimeline}-week</span> {selectedGoalId.replace('_', ' ')} protocol.
               </p>
             </div>
             
-            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 text-left max-w-sm mx-auto space-y-3">
-               <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-4">Blueprint Initialization</p>
-               <div className="flex justify-between text-xs text-white"><span>Objective</span><span className="font-black uppercase">{selectedGoalId.replace('_', ' ')}</span></div>
-               <div className="flex justify-between text-xs text-white"><span>Initial Ratio</span><span className="font-black italic">{(parseFloat(measurements.shoulders)/parseFloat(measurements.waist)).toFixed(2)}</span></div>
-               <div className="flex justify-between text-xs text-white"><span>User Basis</span><span className="font-black uppercase">{background.experience}</span></div>
+            <div className="bg-indigo-600/10 border border-indigo-500/20 rounded-[2rem] p-8 max-w-sm mx-auto space-y-3 text-left">
+               <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-4 italic">Blueprint Initialization</p>
+               <div className="flex justify-between text-xs text-white"><span>Objective</span><span className="font-black uppercase italic">{selectedGoalId.replace('_', ' ')}</span></div>
+               <div className="flex justify-between text-xs text-white"><span>Initial Ratio</span><span className="font-black italic">{currentRatio}</span></div>
+               <div className="flex justify-between text-xs text-white"><span>Training Level</span><span className="font-black uppercase italic">{background.experience}</span></div>
             </div>
           </div>
         )}
@@ -403,16 +422,16 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
             </button>
           )}
           <button
-            onClick={currentStep === 3 ? handleFinalize : handleNext}
+            onClick={currentStep === 2 ? handleFinalize : handleNext}
             disabled={loading || isGenerating}
             className="flex-1 bg-white text-black font-black uppercase italic tracking-widest h-16 rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
           >
             {isGenerating ? (
               <div className="flex items-center justify-center gap-3">
                 <LoadingSpinner size="sm" />
-                <span className="animate-pulse">Generating Blueprint...</span>
+                <span className="animate-pulse">Synthesizing Protocol...</span>
               </div>
-            ) : currentStep === 3 ? 'Deploy Architecture' : 'Continue'}
+            ) : currentStep === 2 ? 'Deploy Architecture' : 'Continue'}
           </button>
         </div>
       </div>

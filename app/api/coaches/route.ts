@@ -1,4 +1,6 @@
+
 // app/api/coaches/route.ts
+// Fix: Use createRouteHandlerClient for Next.js Route Handlers as per @supabase/auth-helpers-nextjs documentation.
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'

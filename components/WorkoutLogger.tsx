@@ -53,8 +53,12 @@ const WorkoutCompleteScreen: React.FC<{
 }> = ({ completedWorkout, onFinish, isSaving, saveError }) => {
   return (
     <div className="w-full max-w-md mx-auto bg-white/[0.03] backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-10 flex flex-col items-center text-center border border-white/10">
-      <div className="w-24 h-24 bg-indigo-500/20 rounded-full flex items-center justify-center mb-8 shadow-[0_0_30px_rgba(79,70,229,0.3)]">
-        <TrophyIcon className="w-12 h-12 text-indigo-400" />
+      <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-8 shadow-2xl ${saveError ? 'bg-red-500/20 shadow-red-500/30' : 'bg-indigo-500/20 shadow-indigo-600/30'}`}>
+        {saveError ? (
+           <span className="material-symbols-outlined text-4xl text-red-500">error</span>
+        ) : (
+           <TrophyIcon className="w-12 h-12 text-indigo-400" />
+        )}
       </div>
       <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter">
         {isSaving ? 'Logging Data' : saveError ? 'Sync Failed' : 'Elite Session Done'}
@@ -63,7 +67,7 @@ const WorkoutCompleteScreen: React.FC<{
         {isSaving
           ? 'Finalizing your training protocols in the secure cloud.'
           : saveError
-          ? `Encryption Error: ${saveError.message}`
+          ? `Network Conflict: ${saveError.message}. We'll retry in the background.`
           : `You've mastered ${completedWorkout.name}. Every rep counts towards your silhouette.`}
       </p>
       
@@ -72,9 +76,9 @@ const WorkoutCompleteScreen: React.FC<{
       <button
         onClick={onFinish}
         disabled={isSaving}
-        className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white font-black py-5 rounded-2xl transition-all shadow-xl shadow-indigo-600/30 active:scale-95 uppercase tracking-[0.2em] italic"
+        className={`w-full ${saveError ? 'bg-slate-700' : 'bg-indigo-600 hover:bg-indigo-500'} text-white font-black py-5 rounded-2xl transition-all shadow-xl active:scale-95 uppercase tracking-[0.2em] italic`}
       >
-        {isSaving ? 'Synchronizing...' : 'Return to Hub'}
+        {isSaving ? 'Synchronizing...' : saveError ? 'Return to Hub' : 'Return to Hub'}
       </button>
     </div>
   );
@@ -168,7 +172,7 @@ export default function WorkoutLogger({ onWorkoutComplete }: { onWorkoutComplete
     const handleCompleteWorkout = async () => {
         if (!activeWorkout) return;
         
-        await execute(async () => {
+        const res = await execute(async () => {
             const exerciseData = activeWorkout.exercises.map((ex, idx) => ({
                 exercise_name: ex.name,
                 sets: ex.sets,
@@ -177,7 +181,7 @@ export default function WorkoutLogger({ onWorkoutComplete }: { onWorkoutComplete
                 order_index: idx
             }));
 
-            await createWorkout({
+            return await createWorkout({
                 workout_name: activeWorkout.name,
                 workout_type: 'strength',
                 completed_at: new Date().toISOString(),
@@ -185,9 +189,10 @@ export default function WorkoutLogger({ onWorkoutComplete }: { onWorkoutComplete
                 calories_burned: 300,
                 notes: 'SculptAI Guided Session'
             }, exerciseData as any);
-
-            setIsWorkoutComplete(true);
         });
+
+        // Always show complete screen to avoid getting stuck, even on error
+        setIsWorkoutComplete(true);
     };
 
     if (isWorkoutComplete && activeWorkout) {

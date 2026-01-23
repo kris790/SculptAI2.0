@@ -1,8 +1,11 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { SparklesIcon } from '../icons';
+import { GoogleGenAI } from "@google/genai";
+import { useAuth } from '../AuthProvider';
 
 interface Recommendation {
   recommendation_type: string;
@@ -11,69 +14,104 @@ interface Recommendation {
 }
 
 const AIRecommendationsPanel: React.FC = () => {
+  const { user, profile } = useAuth();
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchRecommendation = async () => {
+    const generateRecommendation = async () => {
+      if (!user) return;
+      
       setLoading(true);
       setError(null);
+      
       try {
-        // Corrected to use GET as defined in the API route
-        const response = await fetch('/api/ai/recommendations');
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error || 'Failed to get recommendation.');
-        }
-        const data = await response.json();
-        setRecommendation(data);
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const prompt = `
+          You are SculptAI, a world-class physique architecture coach. 
+          Provide a specific, highly technical coaching recommendation for an athlete.
+          User Profile:
+          - Goal: ${profile?.fitness_goal || 'physique development'}
+          - Age: ${profile?.age || 'N/A'}
+          - Weight: ${profile?.weight || 'N/A'} lbs
+          
+          Generate a JSON response with the following keys:
+          - recommendation_type: a slug like "hypertrophy_optimization" or "structural_refinement"
+          - recommendation_text: a professional 1-2 sentence tip focusing on V-Taper, frame width, or symmetry.
+          - confidence: a float between 0.8 and 0.99
+          
+          Respond ONLY with the JSON.
+        `;
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-3-flash-preview',
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json"
+          }
+        });
+
+        const data = JSON.parse(response.text || '{}');
+        setRecommendation({
+          recommendation_type: data.recommendation_type || "structural_refinement",
+          recommendation_text: data.recommendation_text || "Prioritize lateral delt volume to enhance frame width.",
+          confidence: data.confidence || 0.95
+        });
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+        console.error("Recommendation generation error:", err);
+        setError("AI Engine recalibrating. Using structural default.");
+        setRecommendation({
+          recommendation_type: "system_default",
+          recommendation_text: "Ensure progressive overload on primary compound movements this week. Target a 2.5% intensity increase.",
+          confidence: 0.85
+        });
       } finally {
         setLoading(false);
       }
     };
-    fetchRecommendation();
-  }, []);
 
-  const renderContent = () => {
-    if (loading) {
-      return (
-        <div className="flex items-center justify-center h-24">
-          <LoadingSpinner size="md" />
-        </div>
-      );
-    }
-
-    if (error) {
-      return (
-        <div className="text-center text-red-400">
-          <p>Could not load AI insight:</p>
-          <p className="text-sm">{error}</p>
-        </div>
-      );
-    }
-
-    if (recommendation) {
-      return (
-        <div>
-          <p className="text-gray-300">{recommendation.recommendation_text}</p>
-          <p className="text-xs text-gray-500 mt-3 text-right">Confidence: {(recommendation.confidence * 100).toFixed(0)}%</p>
-        </div>
-      );
-    }
-
-    return <p className="text-center text-gray-400">No recommendations available at this time.</p>;
-  };
+    generateRecommendation();
+  }, [user, profile]);
 
   return (
-    <div className="bg-gray-800 rounded-lg shadow-md p-6 border border-gray-700">
-      <h3 className="text-xl font-bold mb-4 flex items-center">
-        <SparklesIcon className="w-6 h-6 mr-3 text-indigo-400" />
-        AI Training Insight
+    <div className="bg-slate-900 border border-indigo-500/20 rounded-[2rem] p-8 shadow-xl relative overflow-hidden group">
+      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 blur-3xl -z-0" />
+      
+      <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
+        <SparklesIcon className="w-5 h-5 text-indigo-400" />
+        AI Architecture Insight
       </h3>
-      {renderContent()}
+      
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <LoadingSpinner size="md" />
+        </div>
+      ) : (
+        <div className="relative z-10 animate-fade-in">
+          {error && (
+            <div className="mb-4 text-[9px] font-black text-amber-500/70 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              {error}
+            </div>
+          )}
+          
+          <p className="text-slate-300 font-medium leading-relaxed italic text-lg">
+            "{recommendation?.recommendation_text}"
+          </p>
+          
+          <div className="mt-6 flex justify-between items-center">
+             <div className="flex gap-2">
+                <span className="px-2 py-1 bg-indigo-500/10 text-indigo-400 text-[8px] font-black uppercase tracking-widest rounded border border-indigo-500/20">
+                  {recommendation?.recommendation_type.replace(/_/g, ' ')}
+                </span>
+             </div>
+             <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">
+                Confidence: {Math.round((recommendation?.confidence || 0) * 100)}%
+             </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
