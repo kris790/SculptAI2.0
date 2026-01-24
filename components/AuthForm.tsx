@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react'
 import { useAuth } from './AuthProvider'
 import { useAsyncAction } from '../lib/hooks/useAsyncAction'
@@ -8,9 +9,9 @@ import { LoadingSpinner } from './ui/LoadingSpinner'
 type FormMode = 'signin' | 'signup' | 'reset'
 
 export default function AuthForm() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
+  const [email, setEmail] = useState('demo@sculptai.com')
+  const [password, setPassword] = useState('Password123!')
+  const [confirmPassword, setConfirmPassword] = useState('Password123!')
   const [mode, setMode] = useState<FormMode>('signin')
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [successMessage, setSuccessMessage] = useState('')

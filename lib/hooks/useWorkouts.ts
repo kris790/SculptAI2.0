@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../../components/AuthProvider'
@@ -73,14 +74,17 @@ export function useWorkouts() {
 
       if (workoutsError) throw workoutsError
 
-      const finalData = (workoutsData as any).length > 0 
+      const finalData = (workoutsData as any)?.length > 0 
         ? (workoutsData as unknown as WorkoutWithExercises[]) 
         : DUMMY_WORKOUTS;
         
       setWorkouts(finalData)
     } catch (err) {
-      setWorkouts(DUMMY_WORKOUTS); // Fallback on error
-      setError(err instanceof Error ? err : new Error('Failed to fetch workouts'))
+      console.error('Fetch workouts failed, falling back to dummy data:', err);
+      setWorkouts(DUMMY_WORKOUTS); 
+      if (err instanceof Error && err.message !== 'Failed to fetch') {
+         setError(err)
+      }
     } finally {
       setLoading(false)
     }
@@ -92,7 +96,6 @@ export function useWorkouts() {
 
   const createWorkout = async (workoutData: Omit<WorkoutInsert, 'id' | 'user_id' | 'created_at'>, exercises: Omit<ExerciseInsert, 'id' | 'workout_id' | 'created_at'>[]) => {
     if (!user) {
-      // Logic for dummy local storage or state update could go here
       const newWorkout: WorkoutWithExercises = {
         id: Math.random().toString(),
         user_id: 'guest',
@@ -109,18 +112,13 @@ export function useWorkouts() {
       return newWorkout;
     }
 
-    const workoutToInsert: WorkoutInsert = {
-      ...workoutData,
-      user_id: user.id,
-      completed_at: workoutData.completed_at || new Date().toISOString(),
-      duration_minutes: workoutData.duration_minutes ?? null,
-      calories_burned: workoutData.calories_burned ?? null,
-      notes: workoutData.notes ?? null,
-    };
-    
     const { data: workout, error: workoutError } = await supabase
       .from('workouts')
-      .insert(workoutToInsert)
+      .insert({
+        ...workoutData,
+        user_id: user.id,
+        completed_at: workoutData.completed_at || new Date().toISOString(),
+      })
       .select()
       .single()
 
@@ -128,20 +126,12 @@ export function useWorkouts() {
     if (!workout) throw new Error('Workout creation failed.')
 
     if (exercises.length > 0) {
-      const exercisesWithWorkoutId: ExerciseInsert[] = exercises.map(ex => ({
-        ...ex,
-        workout_id: workout.id,
-        sets: ex.sets ?? null,
-        reps: ex.reps ?? null,
-        weight: ex.weight ?? null,
-        duration_seconds: ex.duration_seconds ?? null,
-        distance: ex.distance ?? null,
-        notes: ex.notes ?? null,
-      }))
-
       const { error: exercisesError } = await supabase
         .from('exercises')
-        .insert(exercisesWithWorkoutId)
+        .insert(exercises.map(ex => ({
+          ...ex,
+          workout_id: workout.id,
+        })))
 
       if (exercisesError) throw exercisesError
     }

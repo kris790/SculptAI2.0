@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export const metadata: Metadata = {
+// Fix: Removed explicit Metadata type annotation as it was causing a Module '"next"' has no exported member 'Metadata' error in this environment.
+export const metadata = {
   title: "SculptAI - Phase 3",
   description: "AI-powered fitness platform with a coaching marketplace.",
 };

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useSpotlights } from '../lib/hooks/useSpotlights';
 import { LoadingSpinner } from './ui/LoadingSpinner';
@@ -7,7 +8,10 @@ import { HeartIcon } from './icons';
 const AthleteSpotlights: React.FC = () => {
   const { spotlights, loading, error, createSpotlight, toggleLike } = useSpotlights();
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [formData, setFormData] = useState({ title: '', content: '' });
+  const [formData, setFormData] = useState({ 
+    title: 'My 12-Week V-Taper Transformation', 
+    content: 'Starting from a baseline of 1.25 ratio, I focused heavily on lateral raises and strict pull-downs. The AI Coach kept me accountable on my mind-muscle connection. Consistency really is the architect of change!' 
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

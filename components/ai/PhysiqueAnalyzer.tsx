@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 // Fix: Corrected import to pull SparklesIcon from the icons component and LoadingSpinner from the ui/LoadingSpinner component.
@@ -42,16 +41,15 @@ export const PhysiqueAnalyzer: React.FC = () => {
         Speak directly to the user.
       `;
 
+      // Fix: Strictly follow Google GenAI SDK guidelines for sending multi-part content (text and image) using the object format.
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-              { inlineData: { mimeType: "image/jpeg", data: base64Data } }
-            ]
-          }
-        ],
+        contents: {
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+          ]
+        },
       });
 
       setAnalysis(response.text || "Your foundation looks solid. Focus on upper back thickness to improve your silhouette's width.");

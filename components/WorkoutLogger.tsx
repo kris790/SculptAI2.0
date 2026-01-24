@@ -95,8 +95,8 @@ export default function WorkoutLogger({ onWorkoutComplete }: { onWorkoutComplete
     const [isResting, setIsResting] = useState(false);
     const [restTimeLeft, setRestTimeLeft] = useState(0);
     const [isWorkoutComplete, setIsWorkoutComplete] = useState(false);
-    const [weight, setWeight] = useState('');
-    const [reps, setReps] = useState('');
+    const [weight, setWeight] = useState('135');
+    const [reps, setReps] = useState('12');
     const [validationError, setValidationError] = useState('');
     const [isDetailsVisible, setIsDetailsVisible] = useState(false);
     const [showAiAssistant, setShowAiAssistant] = useState(false);
@@ -161,8 +161,8 @@ export default function WorkoutLogger({ onWorkoutComplete }: { onWorkoutComplete
             setCurrentExerciseIndex(currentExerciseIndex + 1);
             setCurrentSetIndex(0);
             setIsResting(false);
-            setWeight('');
-            setReps('');
+            setWeight('135');
+            setReps('12');
             setAiFeedback(null);
         } else {
             handleCompleteWorkout();

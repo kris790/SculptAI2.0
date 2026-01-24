@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react'
 import { useProgressLogs } from '../lib/hooks/useProgressLogs'
+import { useDummyData } from '../context/DummyDataContext'
 import { useAsyncAction } from '../lib/hooks/useAsyncAction'
 import { ErrorMessage } from './ui/ErrorMessage'
 import { LoadingSpinner } from './ui/LoadingSpinner'
@@ -26,23 +27,28 @@ const cmToIn = (cm: number) => Number((cm / IN_TO_CM).toFixed(1));
 const inToCm = (inch: number) => Number((inch * IN_TO_CM).toFixed(1));
 
 export default function ProgressTracker() {
-  const { logs, createLog, loading: logsLoading } = useProgressLogs()
+  const { logs: realLogs, createLog, loading: logsLoading } = useProgressLogs()
+  const { currentUser } = useDummyData();
   const { execute, loading, error, clearError } = useAsyncAction()
   
   const [showForm, setShowForm] = useState(false)
   const [unit, setUnit] = useState<'cm' | 'in'>('in')
+  
+  // Demo mode prioritize dummy history
+  const logs = realLogs.length > 3 ? realLogs : currentUser.measurements;
+
   const [formData, setFormData] = useState({
     log_date: new Date().toISOString().split('T')[0],
-    weight: '',
-    shoulders: '',
-    body_fat_percentage: '',
-    muscle_mass: '',
-    chest: '',
-    waist: '',
-    hips: '',
-    arms: '',
-    thighs: '',
-    notes: ''
+    weight: '184.5',
+    shoulders: '53.0',
+    body_fat_percentage: '12.0',
+    muscle_mass: '95',
+    chest: '45',
+    waist: '31.5',
+    hips: '38.5',
+    arms: '16.8',
+    thighs: '24.5',
+    notes: 'Pre-filled dummy progress note for aesthetic tracking.'
   })
 
   const [formValidationErrors, setFormValidationErrors] = useState<Record<string, string>>({})
@@ -50,9 +56,15 @@ export default function ProgressTracker() {
   const chartData = useMemo(() => {
     return [...logs]
       .filter(log => log.shoulders && log.waist)
-      .sort((a, b) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime())
+      // Fix: Unify the date property as real logs use 'log_date' and dummy logs use 'date'
+      .sort((a, b) => {
+        const dateA = new Date((a as any).log_date || (a as any).date).getTime();
+        const dateB = new Date((b as any).log_date || (b as any).date).getTime();
+        return dateA - dateB;
+      })
       .map(log => ({
-        date: new Date(log.log_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
+        // Fix: Use unified date access for mapping to chart data
+        date: new Date((log as any).log_date || (log as any).date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
         ratio: Number((log.shoulders! / log.waist!).toFixed(2)),
         shoulders: unit === 'in' ? cmToIn(log.shoulders!) : log.shoulders,
         waist: unit === 'in' ? cmToIn(log.waist!) : log.waist,
@@ -119,19 +131,6 @@ export default function ProgressTracker() {
     await execute(async () => {
       await createLog(validation.data as any)
       setShowForm(false)
-      setFormData({
-        log_date: new Date().toISOString().split('T')[0],
-        weight: '',
-        shoulders: '',
-        body_fat_percentage: '',
-        muscle_mass: '',
-        chest: '',
-        waist: '',
-        hips: '',
-        arms: '',
-        thighs: '',
-        notes: ''
-      })
     })
   }
 
@@ -181,7 +180,7 @@ export default function ProgressTracker() {
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.5} />
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10, fontWeight: 700 }} />
-                      <YAxis domain={[1.1, 1.7]} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10, fontWeight: 700 }} />
+                      <YAxis domain={['dataMin - 0.1', 'dataMax + 0.1']} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10, fontWeight: 700 }} />
                       <Tooltip 
                         contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '16px' }}
                         itemStyle={{ color: '#818cf8', fontWeight: 'bold', fontSize: '12px' }}

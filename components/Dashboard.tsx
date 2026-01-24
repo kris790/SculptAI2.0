@@ -1,257 +1,292 @@
 
 import React, { useMemo, useState } from 'react';
-import { useWorkouts } from '../lib/hooks/useWorkouts';
-import { useProgressLogs } from '../lib/hooks/useProgressLogs';
 import { useAuth } from './AuthProvider';
+import { useDummyData } from '../context/DummyDataContext';
 import { LoadingSpinner } from './ui/LoadingSpinner';
-import AIRecommendationsPanel from './ai/AIRecommendationsPanel';
 import ProgressDashboard from './analytics/ProgressDashboard';
-import { SparklesIcon, ChevronDownIcon } from './icons';
+import { SymmetryVisualizer } from './analytics/SymmetryVisualizer';
+import { SparklesIcon, ChevronDownIcon, CheckIcon, TrophyIcon } from './icons';
 
 interface DashboardProps {
   onNavigate?: (tab: string) => void;
 }
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
-  const { workouts, loading: workoutsLoading } = useWorkouts();
-  const { logs, loading: logsLoading } = useProgressLogs();
-  const { profile, userProfile } = useAuth();
+  const { profile, userProfile, user } = useAuth();
+  const { 
+    currentUser, 
+    aiProgram, 
+    aiRecommendations, 
+    addMeasurement, 
+    refreshData 
+  } = useDummyData();
   const [showBlueprint, setShowBlueprint] = useState(false);
 
-  const totalWorkouts = workouts.length;
-  const latestLog = logs.length > 0 ? logs[0] : null;
-  
-  const currentRatio = useMemo(() => {
-    if (latestLog && latestLog.shoulders && latestLog.waist) {
-      return (latestLog.shoulders / latestLog.waist).toFixed(2);
-    }
-    return 'N/A';
-  }, [latestLog]);
+  // Journey state mapping for the Mermaid flow
+  const journeySteps = useMemo(() => [
+    { label: 'LANDED', complete: true },
+    { label: 'GOAL', complete: !!(profile?.fitness_goal || currentUser.goal) },
+    { label: 'METRICS', complete: currentUser.measurements.length > 0 },
+    { label: 'PROGRAM', complete: !!aiProgram },
+    { label: 'TRACKING', complete: currentUser.workouts.length > 0 }
+  ], [profile, currentUser, aiProgram]);
 
-  const needsGoal = !profile?.fitness_goal;
-  const needsLogs = logs.length === 0;
+  const latestLog = currentUser.measurements[currentUser.measurements.length - 1];
+  const lastWorkout = currentUser.workouts[0];
+  const currentRatio = latestLog?.calculatedRatio.toFixed(2) || '0.00';
+  const totalWorkouts = currentUser.workouts.length;
 
   return (
     <div className="max-w-6xl mx-auto space-y-10">
-      {workoutsLoading || logsLoading ? (
-        <div className="flex justify-center items-center p-12">
-          <LoadingSpinner size="lg" />
+      {/* Journey Progress Bar */}
+      <div className="bg-white/5 border border-white/10 rounded-full p-2 hidden md:flex items-center gap-2">
+        {journeySteps.map((step, i) => (
+          <React.Fragment key={step.label}>
+            <div className="flex items-center gap-2 px-4 py-2">
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black ${step.complete ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-500'}`}>
+                {step.complete ? <CheckIcon className="w-3 h-3" /> : i + 1}
+              </div>
+              <span className={`text-[9px] font-black uppercase tracking-widest ${step.complete ? 'text-white' : 'text-slate-500'}`}>
+                {step.label}
+              </span>
+            </div>
+            {i < journeySteps.length - 1 && <div className="h-px flex-1 bg-white/10 mx-2" />}
+          </React.Fragment>
+        ))}
+      </div>
+
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+          <h2 className="text-4xl font-black text-white tracking-tighter uppercase italic">Athletic Hub</h2>
+          <p className="text-slate-400 font-medium text-lg">Elite architecture protocols for {currentUser.name}.</p>
         </div>
-      ) : (
-        <>
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-            <div>
-              <h2 className="text-4xl font-black text-white tracking-tighter uppercase italic">Athletic Hub</h2>
-              <p className="text-slate-400 font-medium text-lg">Your foundation for an elite physique.</p>
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="bg-indigo-600/10 border border-indigo-500/20 px-6 py-3 rounded-2xl flex items-center gap-4 flex-1 md:flex-none">
+            <div className="text-left">
+              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Streak</p>
+              <p className="text-xl font-black text-white italic">6 WEEKS</p>
             </div>
-            <div className="bg-indigo-600/10 border border-indigo-500/20 px-6 py-3 rounded-2xl flex items-center gap-4">
-              <div className="text-left">
-                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Training Streak</p>
-                <p className="text-xl font-black text-white italic">6 WEEKS</p>
-              </div>
-              <div className="h-8 w-px bg-white/10" />
-              <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white text-lg shadow-[0_0_15px_rgba(79,70,229,0.5)]">🔥</div>
-            </div>
-          </div>
-
-          {/* Architecture Scan (Onboarding Prompt) */}
-          {(needsGoal || needsLogs) && (
-            <div className="bg-gradient-to-r from-indigo-900/60 to-slate-900 border border-indigo-500/50 rounded-[2.5rem] p-10 md:p-14 shadow-2xl relative overflow-hidden animate-fade-in">
-              <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/20 blur-[120px] -z-10" />
-              <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
-                <div className="flex-1 space-y-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-indigo-600 rounded-2xl shadow-xl">
-                      <SparklesIcon className="w-6 h-6 text-white" />
-                    </div>
-                    <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter">Architecture Required</h3>
-                  </div>
-                  
-                  <p className="text-slate-300 text-lg font-medium leading-relaxed max-w-xl">
-                    To architect your ideal frame, the AI needs your structural data. Provide your objectives (Lose Weight, Build Muscle, Body Recomp) and measurements (Shoulders, Waist, Chest) to unlock your custom program.
-                  </p>
-
-                  <button 
-                    onClick={() => onNavigate?.('profile')}
-                    className="group bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 px-10 rounded-2xl uppercase tracking-[0.2em] italic transition-all flex items-center gap-3 shadow-2xl shadow-indigo-600/40"
-                  >
-                    Initialize Architecture Scan
-                    <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                  </button>
-                </div>
-                
-                <div className="hidden lg:block w-px h-40 bg-white/10" />
-                
-                <div className="hidden lg:grid grid-cols-2 gap-4">
-                   <div className="p-4 bg-white/5 border border-white/10 rounded-2xl text-center">
-                     <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">V-Taper</p>
-                     <p className="text-white font-bold italic">1.50 Target</p>
-                   </div>
-                   <div className="p-4 bg-white/5 border border-white/10 rounded-2xl text-center">
-                     <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Timeline</p>
-                     <p className="text-white font-bold italic">12-27 Weeks</p>
-                   </div>
-                   <div className="p-4 bg-white/5 border border-white/10 rounded-2xl text-center col-span-2">
-                     <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Form Assistant</p>
-                     <p className="text-white font-bold italic">Real-time Vision</p>
-                   </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* AI Blueprint Section */}
-          {!needsGoal && userProfile?.bio && (
-            <div className="bg-slate-900 border border-indigo-500/20 rounded-[2.5rem] p-10 shadow-xl overflow-hidden group">
-              <button 
-                onClick={() => setShowBlueprint(!showBlueprint)}
-                className="w-full flex justify-between items-center group/btn"
-              >
-                <div className="flex items-center gap-6">
-                  <div className="p-4 bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-600/30 group-hover/btn:scale-105 transition-transform">
-                    <SparklesIcon className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="text-left">
-                    <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">My Architectural Blueprint</h3>
-                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mt-1">Generated Personal Protocol v4.0</p>
-                  </div>
-                </div>
-                <div className={`p-2 rounded-full bg-white/5 text-slate-400 transition-transform duration-500 ${showBlueprint ? 'rotate-180 bg-indigo-500/10 text-indigo-400' : ''}`}>
-                  <ChevronDownIcon className="w-6 h-6" />
-                </div>
-              </button>
-
-              {showBlueprint && (
-                <div className="mt-10 animate-fade-in border-t border-white/5 pt-10">
-                  <div className="prose prose-invert prose-indigo max-w-none">
-                    <div className="text-slate-300 whitespace-pre-line font-medium leading-relaxed text-lg">
-                      {userProfile.bio}
-                    </div>
-                  </div>
-                  <div className="mt-12 p-8 bg-indigo-600/5 border border-indigo-500/10 rounded-[2rem] flex flex-col md:flex-row items-center gap-6">
-                    <div className="flex-1 text-center md:text-left">
-                      <p className="text-xs font-black text-indigo-400 uppercase tracking-[0.2em] mb-2">Protocol Note</p>
-                      <p className="text-sm text-slate-400 italic">This blueprint updates based on your weekly architecture scans. Log measurements consistently for optimal AI calibration.</p>
-                    </div>
-                    <button 
-                      onClick={() => onNavigate?.('progress')}
-                      className="whitespace-nowrap bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black py-4 px-8 rounded-2xl uppercase tracking-widest text-[10px] transition-all"
-                    >
-                      Update Scan Data
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-8 shadow-xl relative overflow-hidden group hover:border-indigo-500/30 transition-all">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 blur-3xl -z-0" />
-              <div className="relative z-10">
-                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-2">Physique Ratio</p>
-                <p className="text-5xl font-black text-white italic tracking-tighter">{currentRatio}</p>
-                <div className="mt-6 flex items-center gap-3">
-                    <div className="flex-1 bg-white/5 h-2 rounded-full overflow-hidden">
-                        <div 
-                            className="bg-indigo-500 h-full shadow-[0_0_12px_rgba(99,102,241,0.6)]" 
-                            style={{ width: `${Math.min(100, (parseFloat(currentRatio === 'N/A' ? '0' : currentRatio) / 1.5) * 100)}%` }}
-                        ></div>
-                    </div>
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">1.50</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-8 shadow-xl group hover:border-emerald-500/30 transition-all">
-              <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-2">Current Phase</p>
-              <p className="text-2xl font-black text-white italic mb-4 uppercase tracking-tight">
-                {profile?.fitness_goal ? profile.fitness_goal.replace('_', ' ') : 'Architecture Setup'}
-              </p>
-              <div className="space-y-2">
-                 <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                    <span className="text-slate-500">Status</span>
-                    <span className="text-emerald-400">{profile?.fitness_goal ? 'ACTIVE' : 'INITIALIZING'}</span>
-                 </div>
-                 <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-500 w-full shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-                 </div>
-              </div>
-            </div>
-
-            <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-8 shadow-xl hover:border-white/20 transition-all">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Total Training</p>
-              <p className="text-5xl font-black text-white italic tracking-tighter">{totalWorkouts}</p>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-2">Sessions Logged</p>
-            </div>
-
-            <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-8 shadow-xl hover:border-white/20 transition-all">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Current Weight</p>
-              <p className="text-5xl font-black text-white italic tracking-tighter">{latestLog?.weight || '--'}</p>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-2">LBS (Imperial)</p>
-            </div>
+            <div className="h-8 w-px bg-white/10" />
+            <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white text-lg shadow-[0_0_15px_rgba(79,70,229,0.5)]">🔥</div>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
-              <AIRecommendationsPanel />
-              <ProgressDashboard />
-            </div>
+          <button 
+            onClick={() => onNavigate?.('log')}
+            className="group relative px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-indigo-600/20 hover:bg-indigo-500 hover:scale-[1.03] transition-all active:scale-95 flex items-center gap-3 border border-indigo-400/30"
+          >
+            <span className="material-symbols-outlined font-black">bolt</span>
+            Start Session
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#0f172a] animate-pulse" />
+          </button>
+        </div>
+      </div>
 
-            <div className="space-y-8">
-              <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl -z-0" />
-                <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] mb-8 italic">Sculpting Goals</h3>
-                <div className="space-y-6">
-                  {[
-                    { label: 'Shoulder Width Index', progress: 85, color: 'bg-indigo-500' },
-                    { label: 'Symmetry Ratio', progress: 42, color: 'bg-indigo-400' },
-                    { label: 'Lat Spread Volume', progress: 30, color: 'bg-cyan-500' },
-                  ].map((goal) => (
-                    <div key={goal.label} className="space-y-2">
-                      <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                        <span className="text-slate-400">{goal.label}</span>
-                        <span className="text-white">{goal.progress}%</span>
-                      </div>
-                      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                        <div className={`h-full ${goal.color} shadow-[0_0_8px_rgba(99,102,241,0.3)]`} style={{ width: `${goal.progress}%` }}></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Phase 4 Live: Pose Architecture */}
-              <div className="bg-indigo-600/10 border border-indigo-500/30 rounded-3xl p-8 relative group overflow-hidden shadow-[0_0_30px_rgba(79,70,229,0.1)]">
-                <div className="absolute -right-4 -top-4 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-700" />
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-indigo-600 rounded-lg shadow-lg">
-                    <SparklesIcon className="w-4 h-4 text-white" />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Left Column */}
+        <div className="lg:col-span-4 space-y-6">
+          <SymmetryVisualizer 
+            shoulders={latestLog?.shoulders || 1.2} 
+            waist={latestLog?.waist || 1} 
+            gender={profile?.gender || 'male'} 
+          />
+          
+          <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-8 shadow-xl relative overflow-hidden group hover:border-indigo-500/30 transition-all">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 blur-3xl -z-0" />
+            <div className="relative z-10">
+              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-2">Physique Ratio</p>
+              <p className="text-5xl font-black text-white italic tracking-tighter">{currentRatio}</p>
+              <p className="text-slate-500 text-xs font-bold uppercase mt-1">Target: {currentUser.targetRatio}</p>
+              <div className="mt-6 flex items-center gap-3">
+                  <div className="flex-1 bg-white/5 h-2 rounded-full overflow-hidden">
+                      <div 
+                          className="bg-indigo-500 h-full shadow-[0_0_12px_rgba(99,102,241,0.6)]" 
+                          style={{ width: `${Math.min(100, (parseFloat(currentRatio) / currentUser.targetRatio) * 100)}%` }}
+                      ></div>
                   </div>
-                  <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Phase 4 Active</h4>
-                </div>
-                <h3 className="text-xl font-black text-white uppercase italic tracking-tight mb-2">Pose Architect</h3>
-                <p className="text-sm text-slate-400 leading-relaxed font-medium mb-6">
-                  Experience AI-powered live posing feedback to maximize your frame's visual impact on stage.
-                </p>
-                <button 
-                  onClick={() => onNavigate?.('pose')}
-                  className="w-full bg-indigo-600 hover:bg-indigo-500 border border-indigo-400 text-white font-black py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all"
-                >
-                  Enter Posing Suite
-                </button>
-              </div>
-
-              <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-8 relative group overflow-hidden">
-                <p className="text-sm text-indigo-200 leading-relaxed font-bold italic">
-                  "Architecture before decoration. Master the compound patterns now; the aesthetic details will follow the strength."
-                </p>
-                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mt-4">— ELITE COACH CORE</p>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{currentUser.targetRatio}</span>
               </div>
             </div>
           </div>
-        </>
-      )}
+        </div>
+
+        {/* Right Column */}
+        <div className="lg:col-span-8 space-y-8">
+          {/* PRIMARY WORKOUT LAUNCHER */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-gradient-to-br from-indigo-600 to-indigo-900 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group border border-white/10">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-[80px] -z-0 group-hover:scale-110 transition-transform" />
+              <div className="relative z-10">
+                <h3 className="text-[10px] font-black text-indigo-200 uppercase tracking-[0.3em] mb-2">LIVE PROTOCOL</h3>
+                <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter leading-tight mb-6">Initialize <br/>Daily Session</h2>
+                <button 
+                  onClick={() => onNavigate?.('log')}
+                  className="w-full bg-white text-indigo-600 py-5 rounded-2xl font-black uppercase italic tracking-widest hover:bg-indigo-50 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined font-black">add_circle</span>
+                  Launch Logger
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-slate-900 border border-white/5 rounded-[2.5rem] p-8 shadow-xl flex flex-col justify-between">
+              <div>
+                <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Last Activity</h3>
+                {lastWorkout ? (
+                  <div className="space-y-2">
+                    <p className="text-xl font-black text-white uppercase italic">{lastWorkout.type}</p>
+                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">
+                      {new Date(lastWorkout.date).toLocaleDateString()} • {lastWorkout.duration} MIN
+                    </p>
+                    <div className="flex gap-2 mt-4">
+                      {lastWorkout.exercises.slice(0, 3).map((ex, i) => (
+                        <span key={i} className="px-2 py-1 bg-white/5 rounded-lg text-[8px] font-black text-slate-400 uppercase tracking-widest border border-white/5">
+                          {ex.split(' ')[0]}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-slate-500 italic text-sm font-medium">No sessions recorded yet.</p>
+                )}
+              </div>
+              <button 
+                onClick={() => onNavigate?.('history')}
+                className="mt-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-white transition-colors flex items-center gap-2 group"
+              >
+                View Full Logs
+                <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 border border-indigo-500/20 rounded-[2.5rem] p-8 shadow-xl overflow-hidden group">
+            <button 
+              onClick={() => setShowBlueprint(!showBlueprint)}
+              className="w-full flex justify-between items-center group/btn"
+            >
+              <div className="flex items-center gap-6">
+                <div className="p-4 bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-600/30 group-hover/btn:scale-105 transition-transform">
+                  <SparklesIcon className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-left">
+                  <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">My Architectural Blueprint</h3>
+                  <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mt-1">
+                    Week {aiProgram?.workouts.length || 0} of {currentUser.timelineWeeks}
+                  </p>
+                </div>
+              </div>
+              <div className={`p-2 rounded-full bg-white/5 text-slate-400 transition-transform duration-500 ${showBlueprint ? 'rotate-180 bg-indigo-500/10 text-indigo-400' : ''}`}>
+                <ChevronDownIcon className="w-6 h-6" />
+              </div>
+            </button>
+
+            {showBlueprint && (
+              <div className="mt-8 animate-fade-in border-t border-white/5 pt-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div>
+                    <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4 italic">Protocol Focus</h4>
+                    <p className="text-white text-lg font-bold italic mb-4">{aiProgram?.focus}</p>
+                    <div className="space-y-2">
+                      {aiProgram?.schedule.map((day, i) => (
+                        <div key={i} className="flex items-center gap-3 text-sm text-slate-400">
+                          <div className="w-1.5 h-1.5 rounded-full bg-indigo-500/50" />
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="bg-white/5 rounded-3xl p-6 border border-white/5">
+                    <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4 italic">Metabolic Targets</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase">Protein</p>
+                        <p className="text-xl font-black text-white italic">{aiProgram?.macroTargets.protein}g</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase">Calories</p>
+                        <p className="text-xl font-black text-white italic">{aiProgram?.macroTargets.calories}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase">Carbs</p>
+                        <p className="text-xl font-black text-white italic">{aiProgram?.macroTargets.carbs}g</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase">Fats</p>
+                        <p className="text-xl font-black text-white italic">{aiProgram?.macroTargets.fats}g</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* AI Recommendations Section */}
+          <div className="space-y-6">
+            <h3 className="text-xl font-black text-white uppercase italic tracking-tighter flex items-center gap-3">
+              <span className="p-1.5 bg-indigo-600 rounded-lg">
+                <SparklesIcon className="w-4 h-4 text-white" />
+              </span>
+              Coaching Adaptations
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {aiRecommendations.map((rec) => (
+                <div key={rec.id} className="bg-slate-900 border border-white/5 rounded-3xl p-6 hover:border-indigo-500/30 transition-all group">
+                  <div className="flex justify-between items-start mb-4">
+                    <h4 className="font-black text-white uppercase italic text-sm tracking-tight">{rec.title}</h4>
+                    <span className={`text-[8px] px-2 py-1 rounded-full font-black uppercase tracking-widest ${
+                      rec.priority === 'high' ? 'bg-red-500/20 text-red-400 border border-red-500/20' :
+                      rec.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/20' :
+                      'bg-green-500/20 text-green-400 border border-green-500/20'
+                    }`}>
+                      {rec.priority}
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-400 mb-6 font-medium leading-relaxed italic">"{rec.description}"</p>
+                  <div className="space-y-3">
+                    <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Protocol Adjustments:</p>
+                    <ul className="space-y-2">
+                      {rec.actionSteps.map((step, i) => (
+                        <li key={i} className="flex items-start gap-3 text-xs text-slate-300 font-medium">
+                          <span className="w-1 h-1 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
+                          {step}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="pt-10 border-t border-white/5">
+         <ProgressDashboard />
+      </div>
+
+      {/* Phase 4 Live: Pose Architecture */}
+      <div className="bg-indigo-600/10 border border-indigo-500/30 rounded-3xl p-8 relative group overflow-hidden shadow-[0_0_30px_rgba(79,70,229,0.1)] flex flex-col md:flex-row items-center gap-8">
+        <div className="absolute -right-4 -top-4 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700" />
+        
+        <div className="shrink-0 p-6 bg-indigo-600 rounded-3xl shadow-2xl shadow-indigo-600/40">
+          <SparklesIcon className="w-12 h-12 text-white" />
+        </div>
+        
+        <div className="flex-1 text-center md:text-left">
+          <h3 className="text-3xl font-black text-white uppercase italic tracking-tight mb-2">Pose Architect Live</h3>
+          <p className="text-slate-400 leading-relaxed font-medium mb-0 max-w-2xl">
+            Experience AI-powered live posing feedback to maximize your frame's visual impact on stage. Sub-200ms latency for real-time skeletal corrections.
+          </p>
+        </div>
+        
+        <button 
+          onClick={() => onNavigate?.('pose')}
+          className="whitespace-nowrap bg-indigo-600 hover:bg-indigo-50 border border-indigo-400 text-white font-black px-10 py-5 rounded-2xl uppercase tracking-widest italic transition-all shadow-xl shadow-indigo-600/40 active:scale-95"
+        >
+          Enter Posing Suite
+        </button>
+      </div>
     </div>
   );
 }

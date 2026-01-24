@@ -1,10 +1,16 @@
+
 import type { Database } from './database.types';
+
+export type Profile = Database['public']['Tables']['profiles']['Row'];
+export type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
+export type ProgressLog = Database['public']['Tables']['progress_logs']['Row'];
+export type WorkoutRecord = Database['public']['Tables']['workouts']['Row'];
+export type ExerciseRecord = Database['public']['Tables']['exercises']['Row'];
 
 export type CoachWithListings = Database['public']['Tables']['coaches']['Row'] & {
   coach_listings: Database['public']['Tables']['coach_listings']['Row'][]
 };
 
-// Fix: Add types for workout programs, which were missing or in a non-module file.
 export interface LoggedSet {
   weight: number | null;
   reps: number | null;
@@ -32,4 +38,11 @@ export interface Program {
   id: string;
   name: string;
   workouts: Workout[];
+}
+
+export interface SymmetryData {
+  shoulders: number;
+  waist: number;
+  ratio: number;
+  date: string;
 }

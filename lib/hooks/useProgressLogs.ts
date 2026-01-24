@@ -50,8 +50,11 @@ export function useProgressLogs() {
       const finalData = data && data.length > 0 ? data : DUMMY_LOGS;
       setLogs(finalData)
     } catch (err) {
+      console.error('Fetch progress logs failed:', err);
       setLogs(DUMMY_LOGS);
-      setError(err instanceof Error ? err : new Error('Failed to fetch progress logs'))
+      if (err instanceof Error && err.message !== 'Failed to fetch') {
+        setError(err);
+      }
     } finally {
       setLoading(false)
     }
@@ -83,23 +86,12 @@ export function useProgressLogs() {
       return newLog;
     }
 
-    const logToInsert: ProgressLogInsert = {
-      ...logData,
-      user_id: user.id,
-      weight: logData.weight ?? null,
-      body_fat_percentage: logData.body_fat_percentage ?? null,
-      muscle_mass: logData.muscle_mass ?? null,
-      chest: logData.chest ?? null,
-      waist: logData.waist ?? null,
-      hips: logData.hips ?? null,
-      arms: logData.arms ?? null,
-      thighs: logData.thighs ?? null,
-      notes: logData.notes ?? null,
-    };
-
     const { data, error } = await supabase
       .from('progress_logs')
-      .insert(logToInsert)
+      .insert({
+        ...logData,
+        user_id: user.id,
+      })
       .select()
       .single()
 

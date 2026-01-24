@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react'
 
 interface UseAsyncActionResult<T> {
@@ -20,12 +21,17 @@ export function useAsyncAction<T = unknown>(): UseAsyncActionResult<T> {
       setLoading(false)
       return result
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('An unknown error occurred')
+      let error = err instanceof Error ? err : new Error('An unknown error occurred');
+      
+      // Specifically handle 'Failed to fetch' which is a common network error
+      if (error.message === 'Failed to fetch') {
+        error = new Error('Connectivity Error: Could not reach the server. Please check your internet connection or if the service is available.');
+      }
+      
       setError(error)
       setLoading(false)
       
-      // Log to monitoring service (e.g., Sentry)
-      console.error('Async action error:', error)
+      console.error('SculptAI Async action error:', error)
       
       return null
     }

@@ -6,13 +6,29 @@ import { useAsyncAction } from '../lib/hooks/useAsyncAction';
 import { profileSchema, userProfileSchema, type ProfileFormData, type UserProfileFormData } from '../lib/validations';
 import { ErrorMessage } from './ui/ErrorMessage';
 import { LoadingSpinner } from './ui/LoadingSpinner';
+import { useDummyData } from '../context/DummyDataContext';
 
 export default function UserProfile() {
   const { user, profile, userProfile, refreshProfile } = useAuth();
+  const { currentUser } = useDummyData();
   const { execute, loading, error, clearError } = useAsyncAction();
   
-  const [formData, setFormData] = useState<Partial<ProfileFormData>>({});
-  const [userProfileData, setUserProfileData] = useState<Partial<UserProfileFormData>>({});
+  const [formData, setFormData] = useState<Partial<ProfileFormData>>({
+    full_name: currentUser.name,
+    age: 28,
+    height: 182,
+    weight: 84,
+    gender: 'male',
+    fitness_goal: currentUser.goal,
+    unit_preference: 'metric'
+  });
+  
+  const [userProfileData, setUserProfileData] = useState<Partial<UserProfileFormData>>({
+    username: currentUser.email.split('@')[0],
+    bio: 'Dedicated physique architect focusing on structural symmetry.',
+    location: 'Venice Beach',
+    is_visible: true
+  });
   
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -20,24 +36,24 @@ export default function UserProfile() {
   useEffect(() => {
     if (profile) {
       setFormData({
-        full_name: profile.full_name || '',
-        age: profile.age || undefined,
-        height: profile.height || undefined,
-        weight: profile.weight || undefined,
-        gender: profile.gender as any,
-        fitness_goal: profile.fitness_goal as any,
-        unit_preference: profile.unit_preference as any || 'metric',
+        full_name: profile.full_name || currentUser.name,
+        age: profile.age || 28,
+        height: profile.height || 182,
+        weight: profile.weight || 84,
+        gender: (profile.gender as any) || 'male',
+        fitness_goal: (profile.fitness_goal as any) || currentUser.goal,
+        unit_preference: (profile.unit_preference as any) || 'metric',
       });
     }
     if (userProfile) {
         setUserProfileData({
-            username: userProfile.username || '',
-            bio: userProfile.bio || '',
-            location: userProfile.location || '',
-            is_visible: userProfile.is_visible,
+            username: userProfile.username || currentUser.email.split('@')[0],
+            bio: userProfile.bio || 'Dedicated physique architect focusing on structural symmetry.',
+            location: userProfile.location || 'Venice Beach',
+            is_visible: userProfile.is_visible ?? true,
         });
     }
-  }, [profile, userProfile]);
+  }, [profile, userProfile, currentUser]);
 
   const handleUpdateProfile = async () => {
     if (!user) return;

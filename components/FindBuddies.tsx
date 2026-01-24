@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useBuddies } from '../lib/hooks/useBuddies';
 import { LoadingSpinner } from './ui/LoadingSpinner';
@@ -11,7 +12,7 @@ const FindBuddies: React.FC = () => {
     searchUsers,
     sendBuddyRequest,
   } = useBuddies();
-  const [filters, setFilters] = useState({ location: '', fitness_goal: '' });
+  const [filters, setFilters] = useState({ location: 'Venice Beach', fitness_goal: 'build_muscle' });
 
   useEffect(() => {
     // Initial search with empty filters

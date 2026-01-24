@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AuthProvider, useAuth } from './components/AuthProvider';
+import { DummyDataProvider } from './context/DummyDataContext';
 import AuthForm from './components/AuthForm';
 import Dashboard from './components/Dashboard';
 import WorkoutLogger from './components/WorkoutLogger';
@@ -24,15 +25,25 @@ const MainApp = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   
+  // MOCK USER FOR TESTING
+  const mockUser = useMemo(() => ({
+    id: '00000000-0000-0000-0000-000000000000',
+    email: 'test-athlete@sculptai.com',
+    user_metadata: { full_name: 'Test Architect' },
+    aud: 'authenticated',
+    role: 'authenticated'
+  }), []);
+
+  const activeUser = user || mockUser;
   const isGuest = !user;
 
-  // Determine if onboarding is needed
+  // Determine if onboarding is needed - Disabled for direct testing unless forced
   const needsOnboarding = useMemo(() => {
     return user && !profile?.fitness_goal;
   }, [user, profile]);
 
   const activeProfile = useMemo(() => profile || {
-    full_name: 'Sculpt Guest',
+    full_name: 'Test Architect',
     fitness_goal: 'build_muscle',
     gender: 'male',
     height: 180,
@@ -40,7 +51,7 @@ const MainApp = () => {
   }, [profile]);
 
   const generatePhysiqueInsight = useCallback(async () => {
-    if (aiInsight || aiLoading || !user || needsOnboarding) return;
+    if (aiInsight || aiLoading || needsOnboarding) return;
     setAiLoading(true);
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -67,13 +78,13 @@ const MainApp = () => {
     } finally {
       setAiLoading(false);
     }
-  }, [activeProfile, aiInsight, aiLoading, user, needsOnboarding]);
+  }, [activeProfile, aiInsight, aiLoading, needsOnboarding]);
 
   useEffect(() => {
-    if (activeTab === 'dashboard' && user && !needsOnboarding) {
+    if (activeTab === 'dashboard' && !needsOnboarding) {
       generatePhysiqueInsight();
     }
-  }, [activeTab, user, generatePhysiqueInsight, needsOnboarding]);
+  }, [activeTab, generatePhysiqueInsight, needsOnboarding]);
 
   if (loading) {
     return (
@@ -83,8 +94,14 @@ const MainApp = () => {
     );
   }
 
-  if (!user && !showAuth) {
-    return <LandingPage onGetStarted={() => setShowAuth(true)} onLogin={() => setShowAuth(true)} />;
+  // Login Bypassed: We no longer return LandingPage/AuthForm unless explicitly requested
+  if (showAuth && !user) {
+    return (
+      <div className="min-h-screen bg-[#0f172a] flex flex-col items-center justify-center p-6">
+        <button onClick={() => setShowAuth(false)} className="mb-8 text-indigo-400 font-bold hover:underline">&larr; BACK TO TEST MODE</button>
+        <AuthForm />
+      </div>
+    );
   }
 
   return (
@@ -105,22 +122,20 @@ const MainApp = () => {
           </div>
 
           <div className="flex items-center gap-6">
-            {!isGuest && (
-              <div className="hidden md:flex items-center gap-2.5 px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
-                <div className={`w-1.5 h-1.5 rounded-full bg-indigo-500 ${aiLoading ? 'animate-ping' : ''}`} />
-                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">
-                  {aiLoading ? "Coaching..." : "AI Intelligence Active"}
-                </span>
-              </div>
-            )}
+            <div className="flex items-center gap-2.5 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">
+                {isGuest ? "PREVIEW MODE" : "LIVE ACCOUNT"}
+              </span>
+            </div>
             
-            {user ? (
+            {!isGuest ? (
               <button onClick={signOut} className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-red-400 transition-colors">
                 SIGN OUT
               </button>
             ) : (
-              <button onClick={() => setShowAuth(false)} className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 hover:text-indigo-300 transition-colors">
-                BACK HOME
+              <button onClick={() => setShowAuth(true)} className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 hover:text-indigo-300 transition-colors">
+                SIGN IN
               </button>
             )}
           </div>
@@ -160,7 +175,7 @@ const MainApp = () => {
         </div>
       </nav>
 
-      {activeTab === 'dashboard' && user && (aiInsight || aiLoading) && (
+      {activeTab === 'dashboard' && (aiInsight || aiLoading) && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
           <div className="relative group">
             <div className="absolute inset-0 bg-indigo-600/5 blur-3xl rounded-full transition-all group-hover:bg-indigo-600/10" />
@@ -188,22 +203,14 @@ const MainApp = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pb-32">
         <div className="animate-fade-in">
-          {user ? (
-            <>
-              {activeTab === 'dashboard' && <Dashboard onNavigate={(tab) => setActiveTab(tab as any)} />}
-              {activeTab === 'pose' && <PosingCoach />}
-              {activeTab === 'log' && <WorkoutLogger onWorkoutComplete={() => setActiveTab('history')} />}
-              {activeTab === 'history' && <WorkoutHistory />}
-              {activeTab === 'progress' && <ProgressTracker />}
-              {activeTab === 'community' && <CommunityDashboard />}
-              {activeTab === 'coaches' && <CoachMarketplace />}
-              {activeTab === 'profile' && <UserProfile />}
-            </>
-          ) : (
-            <div className="flex justify-center py-12">
-              <AuthForm />
-            </div>
-          )}
+          {activeTab === 'dashboard' && <Dashboard onNavigate={(tab) => setActiveTab(tab as any)} />}
+          {activeTab === 'pose' && <PosingCoach />}
+          {activeTab === 'log' && <WorkoutLogger onWorkoutComplete={() => setActiveTab('history')} />}
+          {activeTab === 'history' && <WorkoutHistory />}
+          {activeTab === 'progress' && <ProgressTracker />}
+          {activeTab === 'community' && <CommunityDashboard />}
+          {activeTab === 'coaches' && <CoachMarketplace />}
+          {activeTab === 'profile' && <UserProfile />}
         </div>
       </main>
       
@@ -219,7 +226,9 @@ if (rootElement) {
   root.render(
     <React.StrictMode>
       <AuthProvider>
-        <MainApp />
+        <DummyDataProvider>
+          <MainApp />
+        </DummyDataProvider>
       </AuthProvider>
     </React.StrictMode>
   );

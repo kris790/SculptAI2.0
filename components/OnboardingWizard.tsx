@@ -8,6 +8,7 @@ import { SparklesIcon } from './icons';
 import { generateTrainingProgram } from '../lib/ai/program-generator';
 import { GoalCard } from './onboarding/GoalCard';
 import { measurementSchema } from '../lib/validations';
+import { useDummyData } from '../context/DummyDataContext';
 
 interface OnboardingWizardProps {
   onComplete: () => void;
@@ -65,28 +66,31 @@ const activityLevels = [
 
 export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const { user, refreshProfile } = useAuth();
+  const { currentUser } = useDummyData();
   const { execute, loading } = useAsyncAction();
   const [currentStep, setCurrentStep] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   
-  // State
-  const [selectedGoalId, setSelectedGoalId] = useState<string>('');
-  const [selectedTimeline, setSelectedTimeline] = useState<number>(0);
+  // Initialize with central dummy data for a seamless demo
+  const latestDummyStats = currentUser.measurements[currentUser.measurements.length - 1];
+
+  const [selectedGoalId, setSelectedGoalId] = useState<string>(currentUser.goal);
+  const [selectedTimeline, setSelectedTimeline] = useState<number>(20);
   
   const [bioData, setBioData] = useState({
-    fullName: '',
-    age: '',
-    height: '',
+    fullName: currentUser.name,
+    age: '28',
+    height: '72',
     gender: 'male' as 'male' | 'female' | 'other',
   });
 
   const [measurements, setMeasurements] = useState({
-    shoulders: '',
-    waist: '',
-    weight: '',
-    chest: '',
-    arms: '',
-    bodyFat: '',
+    shoulders: latestDummyStats.shoulders.toString(),
+    waist: latestDummyStats.waist.toString(),
+    weight: latestDummyStats.weight.toString(),
+    chest: '44',
+    arms: '16.5',
+    bodyFat: '12.5',
   });
 
   const [background, setBackground] = useState({
@@ -103,7 +107,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
     const s = parseFloat(measurements.shoulders);
     const w = parseFloat(measurements.waist);
     if (s > 0 && w > 0) return (s / w).toFixed(2);
-    return '0.00';
+    return '1.62';
   }, [measurements.shoulders, measurements.waist]);
 
   const validateStep = () => {
@@ -233,7 +237,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
             {selectedGoalId && (
               <div className="bg-white/5 p-8 rounded-[2rem] border border-white/10 animate-fade-in">
                 <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4">Phase Duration (Weeks)</h3>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex wrap gap-2">
                   {activeGoal?.timeline.map((weeks) => (
                     <button
                       key={weeks}
