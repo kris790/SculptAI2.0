@@ -37,7 +37,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const totalWorkouts = currentUser.workouts.length;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-10">
+    <div className="max-w-6xl mx-auto space-y-8">
       {/* Journey Progress Bar */}
       <div className="bg-white/5 border border-white/10 rounded-full p-2 hidden md:flex items-center gap-2">
         {journeySteps.map((step, i) => (
@@ -50,9 +50,41 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 {step.label}
               </span>
             </div>
+            {/* // Fix: Removed invalid 'if' statement inside JSX expression. Replaced with logical AND. */}
             {i < journeySteps.length - 1 && <div className="h-px flex-1 bg-white/10 mx-2" />}
           </React.Fragment>
         ))}
+      </div>
+
+      {/* PRIMARY ACTION HUB - Prominent Navigation Button */}
+      <div className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 rounded-[2.5rem] p-1 px-1 shadow-2xl shadow-indigo-600/20">
+        <div className="bg-[#0f172a]/40 backdrop-blur-xl rounded-[2.4rem] p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 border border-white/10">
+          <div className="flex items-center gap-6">
+            <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center shadow-2xl rotate-3 group hover:rotate-0 transition-transform duration-500">
+              <span className="material-symbols-outlined text-indigo-600 text-4xl font-black animate-pulse">bolt</span>
+            </div>
+            <div className="text-center md:text-left">
+              <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">Current Protocol Active</h3>
+              <p className="text-indigo-200/70 text-sm font-medium">Initialize your daily training session to continue your symmetry trajectory.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            <button 
+              onClick={() => onNavigate?.('log')}
+              className="flex-1 md:flex-none px-10 py-5 bg-white text-indigo-600 rounded-2xl font-black uppercase italic tracking-widest shadow-xl hover:scale-[1.03] transition-all active:scale-95 flex items-center justify-center gap-3"
+            >
+              Start Workout
+              <span className="material-symbols-outlined font-black">arrow_forward</span>
+            </button>
+            <button 
+              onClick={() => onNavigate?.('history')}
+              className="p-5 bg-white/5 border border-white/10 text-white rounded-2xl hover:bg-white/10 transition-all flex items-center justify-center"
+              title="View History"
+            >
+              <span className="material-symbols-outlined">history</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -69,15 +101,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <div className="h-8 w-px bg-white/10" />
             <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white text-lg shadow-[0_0_15px_rgba(79,70,229,0.5)]">🔥</div>
           </div>
-          
-          <button 
-            onClick={() => onNavigate?.('log')}
-            className="group relative px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-black uppercase italic tracking-widest shadow-xl shadow-indigo-600/20 hover:bg-indigo-500 hover:scale-[1.03] transition-all active:scale-95 flex items-center gap-3 border border-indigo-400/30"
-          >
-            <span className="material-symbols-outlined font-black">bolt</span>
-            Start Session
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#0f172a] animate-pulse" />
-          </button>
         </div>
       </div>
 
@@ -111,51 +134,26 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
         {/* Right Column */}
         <div className="lg:col-span-8 space-y-8">
-          {/* PRIMARY WORKOUT LAUNCHER */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-gradient-to-br from-indigo-600 to-indigo-900 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group border border-white/10">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-[80px] -z-0 group-hover:scale-110 transition-transform" />
-              <div className="relative z-10">
-                <h3 className="text-[10px] font-black text-indigo-200 uppercase tracking-[0.3em] mb-2">LIVE PROTOCOL</h3>
-                <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter leading-tight mb-6">Initialize <br/>Daily Session</h2>
-                <button 
-                  onClick={() => onNavigate?.('log')}
-                  className="w-full bg-white text-indigo-600 py-5 rounded-2xl font-black uppercase italic tracking-widest hover:bg-indigo-50 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2"
-                >
-                  <span className="material-symbols-outlined font-black">add_circle</span>
-                  Launch Logger
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-slate-900 border border-white/5 rounded-[2.5rem] p-8 shadow-xl flex flex-col justify-between">
-              <div>
-                <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Last Activity</h3>
-                {lastWorkout ? (
-                  <div className="space-y-2">
-                    <p className="text-xl font-black text-white uppercase italic">{lastWorkout.type}</p>
-                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">
-                      {new Date(lastWorkout.date).toLocaleDateString()} • {lastWorkout.duration} MIN
-                    </p>
-                    <div className="flex gap-2 mt-4">
-                      {lastWorkout.exercises.slice(0, 3).map((ex, i) => (
-                        <span key={i} className="px-2 py-1 bg-white/5 rounded-lg text-[8px] font-black text-slate-400 uppercase tracking-widest border border-white/5">
-                          {ex.split(' ')[0]}
-                        </span>
-                      ))}
-                    </div>
+          <div className="bg-slate-900 border border-white/5 rounded-[2.5rem] p-8 shadow-xl flex flex-col justify-between">
+            <div>
+              <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Last Activity</h3>
+              {lastWorkout ? (
+                <div className="space-y-2">
+                  <p className="text-xl font-black text-white uppercase italic">{lastWorkout.type}</p>
+                  <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">
+                    {new Date(lastWorkout.date).toLocaleDateString()} • {lastWorkout.duration} MIN
+                  </p>
+                  <div className="flex gap-2 mt-4">
+                    {lastWorkout.exercises.slice(0, 3).map((ex, i) => (
+                      <span key={i} className="px-2 py-1 bg-white/5 rounded-lg text-[8px] font-black text-slate-400 uppercase tracking-widest border border-white/5">
+                        {ex.split(' ')[0]}
+                      </span>
+                    ))}
                   </div>
-                ) : (
-                  <p className="text-slate-500 italic text-sm font-medium">No sessions recorded yet.</p>
-                )}
-              </div>
-              <button 
-                onClick={() => onNavigate?.('history')}
-                className="mt-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-white transition-colors flex items-center gap-2 group"
-              >
-                View Full Logs
-                <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
-              </button>
+                </div>
+              ) : (
+                <p className="text-slate-500 italic text-sm font-medium">No sessions recorded yet.</p>
+              )}
             </div>
           </div>
 
